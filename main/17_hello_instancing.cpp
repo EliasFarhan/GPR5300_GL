@@ -14,7 +14,6 @@ class HelloInstancingDrawingProgram : public DrawingProgram
 {
 public:
 	void Init() override;
-	void ProcessInput();
 	void Draw() override;
 	void Destroy() override;
 
@@ -24,9 +23,6 @@ private:
 	Model asteroidModel{};
 	Shader modelShader;
 	const float asteroidScale = 0.01f;
-	Camera camera = Camera(glm::vec3(0.0f, 100.0f, 500.0f));
-	float lastX;
-	float lastY;
 	size_t planetNmb = 100'000;
 	std::vector<glm::vec3> positions;
 	std::vector<glm::mat4> modelMatrices;
@@ -43,11 +39,9 @@ private:
 
 void HelloInstancingDrawingProgram::Init()
 {
-	Engine* engine = Engine::GetPtr();
-	auto& config = engine->GetConfiguration();
-	lastX = config.screenWidth / 2.0f;
-	lastY = config.screenHeight / 2.0f;
-
+	auto engine = Engine::GetPtr();
+	auto& camera = engine->GetCamera();
+	camera.Position = glm::vec3(500.0f, 100.0f, 500.0f);
 	programName = "Hello Instancing";
 
 	asteroidModel.Init("data/models/rocks01/rock_01.obj");
@@ -138,44 +132,6 @@ void HelloInstancingDrawingProgram::Init()
 #endif
 }
 
-void HelloInstancingDrawingProgram::ProcessInput()
-{
-	Engine* engine = Engine::GetPtr();
-	auto& inputManager = engine->GetInputManager();
-	float dt = engine->GetDeltaTime();
-	float cameraSpeed = 1.0f;
-#ifdef USE_SDL2
-	if (inputManager.GetButton(SDLK_w))
-	{
-		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_s))
-	{
-		camera.ProcessKeyboard(BACKWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_a))
-	{
-		camera.ProcessKeyboard(LEFT, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_d))
-	{
-		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
-	}
-#endif
-
-	auto mousePos = inputManager.GetMousePosition();
-
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-
-	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
-
-}
-
 void HelloInstancingDrawingProgram::Draw()
 {
 	rmt_ScopedOpenGLSample(DrawAsteroid);
@@ -183,7 +139,9 @@ void HelloInstancingDrawingProgram::Draw()
 	glEnable(GL_DEPTH_TEST);
 	ProcessInput();
 	Engine* engine = Engine::GetPtr();
+	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
+
 	glm::mat4 projection = glm::perspective(
 		glm::radians(camera.Zoom),
 		(float)config.screenWidth / (float)config.screenHeight,

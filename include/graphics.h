@@ -53,6 +53,7 @@ public:
 	const std::vector<Shader*>& GetShaders();
 
 protected:
+	virtual void ProcessInput();
 	std::vector<Shader*> shaders;
 	std::string programName;
 };

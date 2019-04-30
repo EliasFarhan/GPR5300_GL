@@ -9,7 +9,6 @@
 
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include "camera.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include "imgui.h"
@@ -32,7 +31,6 @@ public:
 	void DrawScene();
 	void Draw() override;
 	void Destroy() override;
-	void ProcessInput();
 	void UpdateUi() override;
 
 private:
@@ -94,7 +92,7 @@ private:
 		 1.0f, -1.0f,  1.0f, 0.0f,
 		 1.0f,  1.0f,  1.0f, 1.0f
 	};
-	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
+	//Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
 	float lastX = 0;
 	float lastY = 0;
 
@@ -109,7 +107,6 @@ private:
 	glm::mat4 view;
 	PostProcessFx postProcessingFx = PostProcessFx::DistanceFog;
 	float fogColor[3] = {0.3f,0.3f,0.3f};
-	float fogZNear = 0.1;
 	float fogZFar = 100.0f;
 };
 
@@ -275,6 +272,7 @@ void HelloPostProcessDrawingProgram::Draw()
 
 	Engine* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
+	auto& camera = engine->GetCamera();
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_DEPTH_TEST);
 	projection = glm::perspective(glm::radians(camera.Zoom), (float)config.screenWidth / (float)config.screenHeight, 0.1f, 100.0f);
@@ -297,7 +295,6 @@ void HelloPostProcessDrawingProgram::Draw()
 	frameBufferShaderProgram.SetInt("depthTexture", 1);
 	frameBufferShaderProgram.SetVec3("fogColor", fogColor);
 	frameBufferShaderProgram.SetFloat("zFar", fogZFar);
-	frameBufferShaderProgram.SetFloat("zNear", fogZNear);
 	
 	glDisable(GL_DEPTH_TEST);
 	glActiveTexture(GL_TEXTURE0);
@@ -319,49 +316,11 @@ void HelloPostProcessDrawingProgram::Destroy()
 
 
 
-void HelloPostProcessDrawingProgram::ProcessInput()
-{
-	Engine* engine = Engine::GetPtr();
-	auto& inputManager = engine->GetInputManager();
-	float dt = engine->GetDeltaTime();
-	float cameraSpeed = 1.0f;
-#ifdef USE_SDL2
-	if (inputManager.GetButton(SDLK_w))
-	{
-		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_s))
-	{
-		camera.ProcessKeyboard(BACKWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_a))
-	{
-		camera.ProcessKeyboard(LEFT, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_d))
-	{
-		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
-	}
-#endif
-
-	auto mousePos = inputManager.GetMousePosition();
-
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-
-	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
-
-
-}
-
 void HelloPostProcessDrawingProgram::UpdateUi()
 {
 	ImGui::Separator();
 	ImGui::ColorEdit3("fogColor", fogColor);
+	ImGui::SliderFloat("zFar", &fogZFar, 1.0f, 100.0f);
 }
 
 

@@ -45,9 +45,7 @@ public:
 	Scene& GetScene() { return scene; }
 private:
 	Scene scene = {};
-	Camera camera = Camera(glm::vec3(0.0f, 3.0f, 10.0f));
+	//Camera camera = Camera(glm::vec3(0.0f, 3.0f, 10.0f));
 	Shader modelShader;
 	glm::mat4 projection;
-	float lastX;
-	float lastY;
 };

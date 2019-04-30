@@ -6,6 +6,7 @@ struct VS_OUT
 	vec2 TexCoords;
 	vec3 ViewPos;
 	mat3 invTBN;
+	vec4 FragPosLightSpace;
 };
 
 mat4 scale(float x, float y, float z) {

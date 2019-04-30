@@ -8,7 +8,6 @@
 
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include "camera.h"
 #include <glm/gtc/type_ptr.hpp>
 #include "imgui.h"
 
@@ -19,7 +18,6 @@ public:
 	void Init() override;
 	void Draw() override;
 	void Destroy() override;
-	void ProcessInput();
 	void UpdateUi() override;
 private:
 	Shader objShaderProgram;
@@ -75,10 +73,6 @@ private:
 
 	glm::vec3 lightPos = { 2.0f, 0.0f, 2.0f };
 
-	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 10.0f));
-	float lastX = 0;
-	float lastY = 0;
-
 	float ambientStrength = 0.2f;
 	float specularStrength = 0.5f;
 	float diffuseStrength = 1.0f;
@@ -90,11 +84,6 @@ private:
 void HelloLightDrawingProgram::Init()
 {
 	programName = "HelloLight";
-
-	Engine* engine = Engine::GetPtr();
-	auto& config = engine->GetConfiguration();
-	lastX = config.screenWidth / 2.0f;
-	lastY = config.screenHeight / 2.0f;
 
     objShaderProgram.CompileSource(
             "shaders/06_hello_phong_light/light.vert",
@@ -135,6 +124,7 @@ void HelloLightDrawingProgram::Draw()
 	ProcessInput();
 
 	Engine* engine = Engine::GetPtr();
+	Camera& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
 
 	lightPos = glm::vec3(2.0f*sin(2.0f*M_PI / 3.0f*engine->GetTimeSinceInit()), lightPos.y, 2.0f*cos(2.0f*M_PI / 3.0f*engine->GetTimeSinceInit()));
@@ -186,46 +176,6 @@ void HelloLightDrawingProgram::Destroy()
 }
 
 
-
-void HelloLightDrawingProgram::ProcessInput()
-{
-	Engine* engine = Engine::GetPtr();
-	auto& inputManager = engine->GetInputManager();
-	float dt = engine->GetDeltaTime();
-	float cameraSpeed = 1.0f;
-
-#ifdef USE_SDL2
-	if (inputManager.GetButton(SDLK_w))
-	{
-		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_s))
-	{
-		camera.ProcessKeyboard(BACKWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_a))
-	{
-		camera.ProcessKeyboard(LEFT, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_d))
-	{
-		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
-	}
-#endif
-
-	auto mousePos = inputManager.GetMousePosition();
-
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-	
-	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
-
-
-}
 
 void HelloLightDrawingProgram::UpdateUi()
 {

@@ -13,6 +13,7 @@ struct VS_OUT
     vec2 TexCoords;
     vec3 ViewPos;
 	mat3 invTBN;
+	vec4 FragPosLightSpace;
 };
 
 struct EnginePointLight
@@ -62,8 +63,9 @@ vec3 calculate_directional_light(EngineDirectionLight light, VS_OUT fs_in, Engin
     // specular
     vec3 viewDir = normalize(fs_in.ViewPos - fs_in.FragPos);
     vec3 reflectDir = reflect(-lightDir, norm);  
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = spec * vec3(texture(material.texture_specular1, fs_in.TexCoords));
+	vec3 halfwayDir = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
+	vec3 specular = spec * vec3(texture(material.texture_specular1, fs_in.TexCoords));
         
     return light.intensity * (diffuse + specular);
 }

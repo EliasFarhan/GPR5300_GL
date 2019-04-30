@@ -5,6 +5,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#ifdef USE_SDL2
+#include <SDL.h>
+#endif
 
 #include <vector>
 
@@ -20,7 +23,7 @@ enum CameraMovementType {
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
 const float SPEED = 2.5f;
-const float SENSITIVITY = 0.1f;
+const float SENSITIVITY = 0.05f;
 const float ZOOM = 45.0f;
 class Camera
 {
@@ -38,12 +41,14 @@ public:
 	float MovementSpeed;
 	float MouseSensitivity;
 	float Zoom;
+	bool MouseWrapMode = false;
+	SDL_Window* window;
 
 	// Constructor with vectors
-	Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
+	explicit Camera( glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), SDL_Window* window = nullptr, glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f),
 	       float yaw = YAW, float pitch = PITCH);
 	// Constructor with scalar values
-	Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch);
+	explicit Camera( float posX, float posY, float posZ, SDL_Window* window, float upX, float upY, float upZ, float yaw, float pitch);
 
 	// Returns the view matrix calculated using Euler Angles and the LookAt Matrix
 	glm::mat4 GetViewMatrix();
@@ -57,7 +62,11 @@ public:
 	// Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
 	void ProcessMouseScroll(float yoffset);
 
+	//Toggle the option of free camera or not
+	void SwitchWrapMode();
+
 private:
+	friend class Engine;
 	// Calculates the front vector from the Camera's (updated) Euler Angles
 	void updateCameraVectors();
 };

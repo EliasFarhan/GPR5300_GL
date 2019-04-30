@@ -47,7 +47,6 @@ MessageCallback(GLenum source,
 Engine::Engine()
 {
 	enginePtr = this;
-	
 }
 
 Engine::~Engine()
@@ -127,6 +126,8 @@ void Engine::Init()
 
 	engineStartTime = timer.now();
 	previousFrameTime = engineStartTime;
+
+	camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), window);
 #endif
 	
 	for (auto drawingProgram : drawingPrograms)
@@ -178,6 +179,9 @@ void Engine::Loop()
 			{
 			case SDL_SCANCODE_1:
 				SwitchWireframeMode();
+				break;
+			case SDL_SCANCODE_LALT:
+				camera.SwitchWrapMode();
 				break;
 			default:
 				break;
@@ -349,11 +353,6 @@ void Engine::AddDrawingProgram(DrawingProgram* drawingProgram)
 	drawingPrograms.push_back(drawingProgram);
 }
 
-std::vector<DrawingProgram*>& Engine::GetDrawingPrograms()
-{
-	return drawingPrograms;
-}
-
 Engine* Engine::GetPtr()
 {
 	return enginePtr;
@@ -377,4 +376,7 @@ InputManager& Engine::GetInputManager()
 	return inputManager;
 }
 
-
+Camera& Engine::GetCamera()
+{
+	return camera;
+}

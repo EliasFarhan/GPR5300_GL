@@ -5,8 +5,6 @@
 
 #include <engine.h>
 #include <graphics.h>
-#include <camera.h>
-
 
 #include <glm/glm.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -23,10 +21,6 @@ public:
 	void Init() override;
 	void Draw() override;
 	void Destroy() override;
-private:
-	void ProcessInput();
-public:
-
 private:
 	Shader cubeShaderProgram;
 	Shader floorShaderProgram;
@@ -87,19 +81,11 @@ private:
 	-1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 
 	-1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 
 	};
-	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-	float lastX = 0;
-	float lastY = 0;
 };
 
 
 void HelloStencilDrawingProgram::Init()
 {
-	Engine* engine = Engine::GetPtr();
-	auto& config = engine->GetConfiguration();
-	lastX = config.screenWidth / 2.0f;
-	lastY = config.screenHeight / 2.0f;
-
 	programName = "Hello Stencil";
 	shaders.push_back(&cubeShaderProgram);
 	shaders.push_back(&floorShaderProgram);
@@ -148,6 +134,7 @@ void HelloStencilDrawingProgram::Draw()
 
 	Engine* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
+	auto& camera = engine->GetCamera();
 
 	glEnable(GL_DEPTH_TEST);
 	glm::mat4 view = camera.GetViewMatrix();
@@ -237,45 +224,6 @@ void HelloStencilDrawingProgram::Destroy()
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteBuffers(1, &cubeVBO);
 }
-
-void HelloStencilDrawingProgram::ProcessInput()
-{
-	Engine* engine = Engine::GetPtr();
-	auto& inputManager = engine->GetInputManager();
-	float dt = engine->GetDeltaTime();
-	float cameraSpeed = 1.0f;
-
-#ifdef USE_SDL2
-	if (inputManager.GetButton(SDLK_w))
-	{
-		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_s))
-	{
-		camera.ProcessKeyboard(BACKWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_a))
-	{
-		camera.ProcessKeyboard(LEFT, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_d))
-	{
-		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
-	}
-#endif
-
-	auto mousePos = inputManager.GetMousePosition();
-
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-
-	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
-}
-
 
 int main(int argc, char** argv)
 {

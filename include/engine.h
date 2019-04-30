@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <input.h>
+#include <camera.h>
 
 class DrawingProgram;
 struct Remotery;
@@ -52,8 +53,9 @@ public:
 
 	Configuration& GetConfiguration();
 	InputManager& GetInputManager();
+	Camera& GetCamera();
 	void AddDrawingProgram(DrawingProgram* drawingProgram);
-	std::vector<DrawingProgram*>& GetDrawingPrograms();
+	std::vector<DrawingProgram*>& GetDrawingPrograms() { return drawingPrograms; };
 
 
 	static Engine* GetPtr();
@@ -75,6 +77,7 @@ private:
 #endif
 	std::vector<DrawingProgram*> drawingPrograms;
 	InputManager inputManager;
+	Camera camera;
 	Configuration configuration;
 	Remotery* rmt;
 	int selectedDrawingProgram = -1;

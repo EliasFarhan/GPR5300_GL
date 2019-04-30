@@ -52,7 +52,6 @@ void Scene::Init()
 		spotLight.cutOff = spotLightJson["cutOff"];
 		spotLight.outerCutOff = spotLightJson["outerCutOff"];
 		spotLight.intensity = spotLightJson["intensity"];
-		spotLight.enable = spotLightJson["enable"];
 		spotLights.push_back(spotLight);
 	}
 	{
@@ -63,6 +62,7 @@ void Scene::Init()
 		{
 			directionLight.direction = ConvertVec3FromJson(directionLightJson["direction"]);
 			directionLight.intensity = directionLightJson["intensity"];
+			directionLight.position = ConvertVec3FromJson(directionLightJson["position"]);
 		}
 		this->directionLight = directionLight;
 
@@ -107,10 +107,6 @@ void SceneDrawingProgram::Init()
 		"shaders/engine/model.vert",
 		"shaders/engine/model.frag");
 	shaders.push_back(&modelShader);
-	Engine* engine = Engine::GetPtr();
-	auto& config = engine->GetConfiguration();
-	lastX = config.screenWidth / 2.0f;
-	lastY = config.screenHeight / 2.0f;
 }
 void SceneDrawingProgram::Draw()
 {
@@ -121,6 +117,7 @@ void SceneDrawingProgram::Draw()
 
 	glEnable(GL_DEPTH_TEST);
 	Engine* engine = Engine::GetPtr();
+	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
 	projection = glm::perspective(
 		glm::radians(camera.Zoom), 
@@ -152,6 +149,7 @@ void SceneDrawingProgram::ProcessInput()
 {
 	Engine* engine = Engine::GetPtr();
 	auto& inputManager = engine->GetInputManager();
+	auto& camera = engine->GetCamera();
 	float dt = engine->GetDeltaTime();
 	float cameraSpeed = 1.0f;
 #ifdef USE_SDL2
@@ -175,12 +173,7 @@ void SceneDrawingProgram::ProcessInput()
 
 	auto mousePos = inputManager.GetMousePosition();
 
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
+	camera.ProcessMouseMovement(mousePos.x, mousePos.y, true);
 
 	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
 }

@@ -3,13 +3,9 @@ out vec4 FragColor;
 in VS_OUT vs_out;
 
 uniform EngineMaterial material;
-uniform vec3 viewPos;
 
 void main()
 {
-
-
-
     // get diffuse color
     vec3 color = texture(material.texture_diffuse1, vs_out.TexCoords).rgb;
 

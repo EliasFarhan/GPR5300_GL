@@ -25,9 +25,6 @@ public:
 	void Destroy() override;
 private:
 	void ProcessInput();
-public:
-    
-private:
     Shader cubeShaderProgram;
 	unsigned int cubeVBO, cubeVAO;
 	unsigned int textureWall;
@@ -216,24 +213,6 @@ void HelloStencilDrawingProgram::ProcessInput()
 	auto& inputManager = engine->GetInputManager();
 	float dt = engine->GetDeltaTime();
 	float cameraSpeed = 1.0f;
-#ifdef USE_SFML2
-	if (inputManager.GetButton(sf::Keyboard::W))
-	{
-		cameraPos += cameraSpeed * cameraFront * dt;
-	}
-	if (inputManager.GetButton(sf::Keyboard::S))
-	{
-		cameraPos -= cameraSpeed * cameraFront * dt;
-	}
-	if (inputManager.GetButton(sf::Keyboard::A))
-	{
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * dt;
-	}
-	if (inputManager.GetButton(sf::Keyboard::D))
-	{
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed* dt;
-	}
-#endif
 
 #ifdef USE_SDL2
 	if(inputManager.GetButton(SDLK_w))

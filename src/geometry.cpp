@@ -96,8 +96,3 @@ void Plane::Draw()
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 }
-
-unsigned Plane::GetVAO()
-{
-	return quadVAO;
-}

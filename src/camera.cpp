@@ -1,7 +1,6 @@
 #include <camera.h>
 
-
-Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
+Camera::Camera(glm::vec3 position, SDL_Window* window, glm::vec3 up, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
 MovementSpeed(SPEED),
 MouseSensitivity(SENSITIVITY),
 Zoom(ZOOM)
@@ -10,16 +9,18 @@ Zoom(ZOOM)
 	WorldUp = up;
 	Yaw = yaw;
 	Pitch = pitch;
+	this->window = window;
 	updateCameraVectors();
 }
 
-Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch):
+Camera::Camera(float posX, float posY, float posZ, SDL_Window* window, float upX, float upY, float upZ, float yaw, float pitch):
 	Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
 {
 	Position = glm::vec3(posX, posY, posZ);
 	WorldUp = glm::vec3(upX, upY, upZ);
 	Yaw = yaw;
 	Pitch = pitch;
+	this->window = window;
 	updateCameraVectors();
 }
 
@@ -41,13 +42,25 @@ void Camera::ProcessKeyboard(CameraMovementType direction, float deltaTime)
 		Position += Right * velocity;
 }
 
-void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch)
+void Camera::ProcessMouseMovement(float mouseX, float mouseY, GLboolean constrainPitch)
 {
-	xoffset *= MouseSensitivity;
-	yoffset *= MouseSensitivity;
+	int screenWidth, screenHeight;
+#ifdef USE_SDL2
+	SDL_GetWindowSize(window, &screenWidth, &screenHeight);
 
-	Yaw += xoffset;
-	Pitch += yoffset;
+	if (MouseWrapMode)
+	{
+		SDL_WarpMouseInWindow(window, screenWidth / 2, screenHeight / 2);
+		float xOffset = mouseX - screenWidth / 2.0f;
+		float yOffset = screenHeight / 2.0f - mouseY; // reversed since y-coordinates go from bottom to top
+
+		xOffset *= MouseSensitivity;
+		yOffset *= MouseSensitivity;
+
+		Yaw += xOffset;
+		Pitch += yOffset;
+	}
+#endif
 
 	// Make sure that when pitch is out of bounds, screen doesn't get flipped
 	if (constrainPitch)
@@ -70,6 +83,15 @@ void Camera::ProcessMouseScroll(float yoffset)
 		Zoom = 1.0f;
 	if (Zoom >= 45.0f)
 		Zoom = 45.0f;
+}
+
+void Camera::SwitchWrapMode()
+{
+	MouseWrapMode = !MouseWrapMode;
+	if(MouseWrapMode)
+		SDL_ShowCursor(SDL_DISABLE);
+	else
+		SDL_ShowCursor(SDL_ENABLE);
 }
 
 void Camera::updateCameraVectors()

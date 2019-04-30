@@ -1,11 +1,10 @@
 #include <engine.h>
 #include <graphics.h>
-#include "camera.h"
 #include "model.h"
 #include "imgui.h"
 
 
-#define REFRACTION
+//#define REFRACTION
 
 #ifdef REFRACTION
 float refractiveIndexes []=
@@ -38,7 +37,6 @@ class HelloCubemapsDrawingProgram : public DrawingProgram
 public:
 	~HelloCubemapsDrawingProgram() = default;
 	void Init() override;
-	void ProcessInput();
 	void Draw() override;
 	void Destroy() override;
 	void UpdateUi() override;
@@ -46,9 +44,7 @@ private:
 	unsigned int cubemapTexture;
 	Shader cubemapShader;
 	GLuint cubeMapVAO;
-	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 5.0f));
-	float lastX = 0;
-	float lastY = 0;
+	
 	float vertices[5 * 36] =
 	{
 		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -143,7 +139,7 @@ private:
 
 	Model model;
 	Shader modelShaderProgram;
-	float reflectionValue = 0.0f;
+	float reflectionValue = 0.5f;
 	int diffuseMapTexture = 0;
 	int specularMapTexture = 0;
 #ifdef REFRACTION
@@ -153,11 +149,6 @@ private:
 
 void HelloCubemapsDrawingProgram::Init()
 {
-	Engine* engine = Engine::GetPtr();
-	auto& config = engine->GetConfiguration();
-	lastX = config.screenWidth / 2.0f;
-	lastY = config.screenHeight / 2.0f;
-
 	programName = "Hello Cubemaps";
 
     cubemapShader.CompileSource(
@@ -246,49 +237,14 @@ void HelloCubemapsDrawingProgram::Init()
 	
 }
 
-void HelloCubemapsDrawingProgram::ProcessInput()
-{
-	Engine* engine = Engine::GetPtr();
-	auto& inputManager = engine->GetInputManager();
-	float dt = engine->GetDeltaTime();
-	float cameraSpeed = 1.0f;
-#ifdef USE_SDL2
-	if (inputManager.GetButton(SDLK_w))
-	{
-		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_s))
-	{
-		camera.ProcessKeyboard(BACKWARD, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_a))
-	{
-		camera.ProcessKeyboard(LEFT, engine->GetDeltaTime());
-	}
-	if (inputManager.GetButton(SDLK_d))
-	{
-		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
-	}
-#endif
-
-	auto mousePos = inputManager.GetMousePosition();
-
-	float xoffset = mousePos.x - lastX;
-	float yoffset = lastY - mousePos.y; // reversed since y-coordinates go from bottom to top
-	lastX = mousePos.x;
-	lastY = mousePos.y;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-
-	camera.ProcessMouseScroll(inputManager.GetMouseWheelDelta());
-
-}
 
 void HelloCubemapsDrawingProgram::Draw()
 {
 	ProcessInput();
 	Engine* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
+	auto& camera = engine->GetCamera();
+
 	const glm::mat4 projection = glm::perspective(
 		glm::radians(camera.Zoom), 
 		(float)config.screenWidth / (float)config.screenHeight, 
