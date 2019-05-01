@@ -22,7 +22,7 @@ private:
 	unsigned rboDepth = 0;
 	unsigned hdrColorBuffer = 0;
 
-	Shader corridorShader;
+	Shader modelForwardShader;
 	Plane corridorPlane;
 	float corridorScale[3] = { 1.1f, 10.0f, 1.0f };
 	unsigned corridorDiffuseMap = 0;
@@ -48,10 +48,10 @@ void HelloHdrDrawingProgram::Init()
 	corridorDiffuseMap = stbCreateTexture("data/sprites/bricks_02_dif.tga");
 	corridorNormalMap = stbCreateTexture("data/sprites/bricks_02_nm.tga");
 	corridorSpecularMap = stbCreateTexture("data/sprites/bricks_02_spec.tga");
-	corridorShader.CompileSource(
+	modelForwardShader.CompileSource(
 		"shaders/20_hello_hdr/plane.vert", 
 		"shaders/20_hello_hdr/plane.frag");
-	shaders.push_back(&corridorShader);
+	shaders.push_back(&modelForwardShader);
 
 	hdrPlane.Init();
 	glGenFramebuffers(1, &hdrFBO);
@@ -111,33 +111,33 @@ void HelloHdrDrawingProgram::Draw()
 	glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//Draw corridors
-	corridorShader.Bind();
+	modelForwardShader.Bind();
 	for(int i = 0; i < 5; i++)
 	{
 
 		lights[i].intensity = lightIntensity;
-		lights[i].Bind(corridorShader, i);
+		lights[i].Bind(modelForwardShader, i);
 	}
 
-	corridorShader.SetInt("pointLightsNmb", 5);
+	modelForwardShader.SetInt("pointLightsNmb", 5);
 	const glm::mat4 projection = glm::perspective(
 		camera.Zoom,
 		(float)config.screenWidth / config.screenHeight,
 		0.1f, 100.0f);
-	corridorShader.SetMat4("projection", projection);
-	corridorShader.SetMat4("view", camera.GetViewMatrix());
-	corridorShader.SetVec2("texTiling", glm::vec2(corridorScale[0], corridorScale[1]));
+	modelForwardShader.SetMat4("projection", projection);
+	modelForwardShader.SetMat4("view", camera.GetViewMatrix());
+	modelForwardShader.SetVec2("texTiling", glm::vec2(corridorScale[0], corridorScale[1]));
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, corridorDiffuseMap);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, corridorNormalMap);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, corridorSpecularMap);
-	corridorShader.SetInt("material.texture_diffuse1", 0);
-	corridorShader.SetInt("material.texture_normal", 1);
-	corridorShader.SetInt("material.texture_specular1", 2);
-	corridorShader.SetVec3("viewPos", camera.Position);
-	corridorShader.SetFloat("ambientIntensity", 0.0f);
+	modelForwardShader.SetInt("material.texture_diffuse1", 0);
+	modelForwardShader.SetInt("material.texture_normal", 1);
+	modelForwardShader.SetInt("material.texture_specular1", 2);
+	modelForwardShader.SetVec3("viewPos", camera.Position);
+	modelForwardShader.SetFloat("ambientIntensity", 0.0f);
 	for (int i = 0; i < 4; i++)
 	{
 		
@@ -156,7 +156,7 @@ void HelloHdrDrawingProgram::Draw()
 		model = glm::mat4_cast(quaternion)*model;
 		
 
-		corridorShader.SetMat4("model", model);
+		modelForwardShader.SetMat4("model", model);
 		corridorPlane.Draw();
 	}
 

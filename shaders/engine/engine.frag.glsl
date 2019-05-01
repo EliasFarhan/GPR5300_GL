@@ -104,8 +104,8 @@ vec3 calculate_spot_light(EngineSpotLight light, VS_OUT fs_in, EngineMaterial ma
     return light.intensity * intensity * (diffuse + specular);
 }
 
-const int MAX_POINT_LIGHT = 5;
-const int MAX_SPOT_LIGHT = 5;
+const int MAX_POINT_LIGHT = 128;
+const int MAX_SPOT_LIGHT = 128;
 
 uniform EnginePointLight pointLights[MAX_POINT_LIGHT];
 uniform EngineSpotLight spotLights[MAX_SPOT_LIGHT];
