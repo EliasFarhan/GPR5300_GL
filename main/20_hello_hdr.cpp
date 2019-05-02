@@ -97,6 +97,7 @@ void HelloHdrDrawingProgram::Init()
 		lights[i].color = colors[i];
 		lights[i].intensity = 0.5f;
 		lights[i].distance = 1.0f;
+
 	}
 	
 }

@@ -24,8 +24,8 @@ void main()
     {
 		EnginePointLight light = pointLights[i];
 		float distance    = length(light.position - FragPos);
-		float attenuation = min(light.distance / (light.constant + light.linear * distance + 
-    				light.quadratic * (distance * distance)), 1.0); 
+		float attenuation = min(light.distance / (pointConstant + pointLinear * distance + 
+    				pointQuadratic * (distance * distance)), 1.0); 
 		if(attenuation < 0.01)
 			attenuation = 0.0;
 

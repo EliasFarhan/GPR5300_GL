@@ -33,7 +33,7 @@ private:
 	unsigned int floorTexture;
 
 	unsigned int depthMapFBO;
-	const unsigned int SHADOW_WIDTH = 4*1024, SHADOW_HEIGHT = 4*1024;
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 	unsigned int depthMap;
 	bool shadowBiasEnable = false;
@@ -143,7 +143,8 @@ void HelloShadowDrawingProgram::Draw()
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	float near_plane = 1.0f, far_plane = 20.0f;
-	glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+	glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 
+		near_plane, far_plane);
 	glm::mat4 lightView = glm::lookAt(
 		directionLight.position,
 		directionLight.position+directionLight.direction,

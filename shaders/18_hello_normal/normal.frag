@@ -14,7 +14,7 @@ void main()
     vec3 normal = texture(normalMap, vs_out.TexCoords).rgb;
     // transform normal vector to range [-1,1]
     normal = normalize(normal * 2.0 - 1.0);  // this normal is in tangent space
-   
+
 	normal = vs_out.invTBN * normal;
     // get diffuse color
     vec3 color = texture(diffuseMap, vs_out.TexCoords).rgb;

@@ -38,8 +38,9 @@ private:
 	Cube lightCube;
 	Shader lightShader;
 	const int modelNmb = 10;
-	static const int lightNmb = 128;
-	PointLight lights[lightNmb] = {};
+	static const int maxLightNmb = 128;
+	int lightNmb = maxLightNmb;
+	PointLight lights[maxLightNmb] = {};
 	float exposure = 1.0f;
 	float lightIntensity = 1.0f;
 	//blur
@@ -200,28 +201,42 @@ void HelloDeferredDrawingProgram::Init()
 
 void HelloDeferredDrawingProgram::Draw()
 {
+	rmt_BeginOpenGLSample(DrawSceneGPU);
+	rmt_BeginCPUSample(DrawSceneCPU, 0);
 	ProcessInput();
 	auto* engine = Engine::GetPtr();
 	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
-	glEnable(GL_DEPTH_TEST);
 
+	glEnable(GL_DEPTH_TEST);
+	rmt_BeginOpenGLSample(GeometryPassGPU);
+	rmt_BeginCPUSample(GeometryPassCPU, 0);
+	rmt_BeginOpenGLSample(BindG_BufferGPU);
+	rmt_BeginCPUSample(BindG_BufferCPU, 0);
+	rmt_BeginOpenGLSample(BindFramebufferGPU);
+	rmt_BeginCPUSample(BindFramebufferCPU, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, deferred ? gBuffer : hdrFBO);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	rmt_EndOpenGLSample();//BindFramebufferGPU
+	rmt_EndCPUSample();//BindFramebufferCPU
 	Shader& currentShader = deferred ? modelDeferredShader : modelForwardShader;
 	//Draw corridors
 	currentShader.Bind();
 	if (!deferred)
 	{
+		rmt_BeginOpenGLSample(BindLightsGPU);
+		rmt_BeginCPUSample(BindLightsCPU, 0);
 		for (int i = 0; i < lightNmb; i++)
 		{
 			lights[i].intensity = lightIntensity;
 			lights[i].Bind(currentShader, i);
 		}
+		rmt_EndOpenGLSample();//BindLightsGPU
+		rmt_EndCPUSample();//BindLightsCPU
 	}
 
-	currentShader.SetInt("pointLightsNmb", 5);
+	currentShader.SetInt("pointLightsNmb", lightNmb);
 	const glm::mat4 projection = glm::perspective(
 		camera.Zoom,
 		(float)config.screenWidth / config.screenHeight,
@@ -238,8 +253,13 @@ void HelloDeferredDrawingProgram::Draw()
 	currentShader.SetInt("material.texture_diffuse1", 0);
 	currentShader.SetInt("material.texture_normal", 1);
 	currentShader.SetInt("material.texture_specular1", 2);
+	currentShader.SetFloat("material.shininess", 16.0f);
 	currentShader.SetVec3("viewPos", camera.Position);
 	currentShader.SetFloat("ambientIntensity", 0.0f);
+	rmt_EndOpenGLSample();//BindG_BufferGPU
+	rmt_EndCPUSample();//BindG_BufferCPU
+	rmt_BeginOpenGLSample(DrawCorridorGPU);
+	rmt_BeginCPUSample(DrawCorridorCPU, 0);
 	for (int i = 0; i < 4; i++)
 	{
 		const float angles[4] =
@@ -260,6 +280,10 @@ void HelloDeferredDrawingProgram::Draw()
 		currentShader.SetMat4("model", model);
 		corridorPlane.Draw();
 	}
+	rmt_EndCPUSample();//DrawCorridorCPU
+	rmt_EndOpenGLSample();//DrawCorridorGPU
+	rmt_BeginOpenGLSample(DrawModelGPU);
+	rmt_BeginCPUSample(DrawModelCPU, 0);
 	for(int i = 0; i < modelNmb;i++)
 	{
 		glm::mat4 model = glm::mat4(1.0f);
@@ -272,12 +296,27 @@ void HelloDeferredDrawingProgram::Draw()
 		currentShader.SetMat4("model", model);
 		this->model.Draw(currentShader);
 	}
+	rmt_EndOpenGLSample();//DrawModelGPU
+	rmt_EndCPUSample();//DrawModelCPU
+
+	rmt_EndOpenGLSample();//GeometryPassGPU
+	rmt_EndCPUSample();//GeometryPassCPU
 	if(deferred)
 	{
-		glDisable(GL_DEPTH_TEST);
+		rmt_ScopedOpenGLSample(DeferredLigtingPassGPU);
+		rmt_ScopedCPUSample(DeferredLigtingPassCPU, 0);
+		
 		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+		glDisable(GL_DEPTH_TEST);
+		
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//copy depth buffer into hdrFBO
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, hdrFBO);
+		glBlitFramebuffer(
+			0, 0, config.screenWidth, config.screenHeight, 0, 0, config.screenWidth, config.screenHeight, GL_DEPTH_BUFFER_BIT, GL_NEAREST
+		);
 		lightingPassShader.Bind();
 
 		for (int i = 0; i < lightNmb; i++)
@@ -302,22 +341,30 @@ void HelloDeferredDrawingProgram::Draw()
 		glEnable(GL_DEPTH_TEST);
 	}
 	lightShader.Bind();
+
+	rmt_BeginOpenGLSample(DrawLightsGPU);
+	rmt_BeginCPUSample(DrawLightsCPU, 0);
 	//Draw lights
-	/*for (auto& light : lights)
+	for (int i = 0; i < lightNmb;i++)
 	{
 		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, light.position);
+		model = glm::translate(model, lights[i].position);
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-		lightShader.SetVec3("lightColor", light.color);
+		lightShader.SetVec3("lightColor", lights[i].color);
 		lightShader.SetMat4("model", model);
 		lightShader.SetMat4("view", camera.GetViewMatrix());
 		lightShader.SetMat4("projection", projection);
 		lightCube.Draw();
-	}*/
+	}
+
+	rmt_EndOpenGLSample();//draw lights
+	rmt_EndCPUSample();
 	
 	bool horizontal = true, first_iteration = true;
 	int amount = 10;
 	blurShader.Bind();
+	rmt_BeginOpenGLSample(BlurPassGPU);
+	rmt_BeginCPUSample(BlurPassCPU, 0);
 	for (unsigned int i = 0; i < amount; i++)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
@@ -332,6 +379,11 @@ void HelloDeferredDrawingProgram::Draw()
 		if (first_iteration)
 			first_iteration = false;
 	}
+	rmt_EndCPUSample();//BlurPassCPU
+	rmt_EndOpenGLSample();//BlurPassGPU
+
+	rmt_BeginCPUSample(DefaultFramebufferCPU, 0);
+	rmt_BeginOpenGLSample(DefaultFramebufferGPU);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	//Show hdr quad
 	hdrShader.Bind();
@@ -344,6 +396,10 @@ void HelloDeferredDrawingProgram::Draw()
 	hdrShader.SetInt("bloomBlur", 1);
 	hdrShader.SetFloat("exposure", exposure);
 	hdrPlane.Draw();
+	rmt_EndOpenGLSample();//DefaultFramebufferGPU
+	rmt_EndCPUSample();//DefaultFramebufferCPU
+	rmt_EndOpenGLSample();//DrawSceneGPU
+	rmt_EndCPUSample();//DrawSceneCPU
 
 }
 
@@ -361,6 +417,7 @@ void HelloDeferredDrawingProgram::UpdateUi()
 	ImGui::InputFloat3("Camera Position", (float*)&camera.Position);
 	ImGui::SliderFloat("Exposure", &exposure, 0.1f, 5.0f);
 	ImGui::SliderFloat("Backlight Intensity", &lightIntensity, 0.1f, 500.0f);
+	ImGui::SliderInt("Lights Nmb", &lightNmb, 1, maxLightNmb);
 }
 
 int main(int argc, char** argv)
