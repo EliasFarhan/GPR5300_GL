@@ -160,7 +160,7 @@ void HelloSSAODrawingProgram::Init()
 
 	modelDeferredShader.CompileSource(
 		"shaders/24_hello_ssao/ssao.vert",
-		"shaders/23_hello_ssao/ssao.frag");
+		"shaders/24_hello_ssao/ssao.frag");
 	lightingPassShader.CompileSource(
 		"shaders/24_hello_ssao/lighting_pass.vert",
 		"shaders/24_hello_ssao/lighting_pass.frag");
@@ -176,6 +176,9 @@ void HelloSSAODrawingProgram::Init()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
 
 	// - normal color buffer
@@ -189,7 +192,9 @@ void HelloSSAODrawingProgram::Init()
 	// - color + specular color buffer
 	glGenTextures(1, &gAlbedoSpec);
 	glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, config.screenWidth, config.screenHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+		config.screenWidth, config.screenHeight,
+		0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gAlbedoSpec, 0);
@@ -197,7 +202,9 @@ void HelloSSAODrawingProgram::Init()
 	// - ssao color buffer
 	glGenTextures(1, &gSSAOAlbedo);
 	glBindTexture(GL_TEXTURE_2D, gSSAOAlbedo);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 
+		config.screenWidth, config.screenHeight, 0, 
+		GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gSSAOAlbedo, 0);
@@ -241,7 +248,7 @@ void HelloSSAODrawingProgram::Init()
 		float scale = float(i) / 64.0;
 
 		// scale samples s.t. they're more aligned to center of kernel
-		scale = 0.1f + scale * scale * (1.0f-0.1f); //a + f * (b - a);
+		scale = 0.1f + scale * scale * (1.0f - 0.1f); //a + f * (b - a);
 		sample *= scale;
 		ssaoKernel.push_back(sample);
 	}
@@ -256,7 +263,7 @@ void HelloSSAODrawingProgram::Init()
 	}
 	glGenTextures(1, &noiseTexture);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 4, 4, 0, GL_RGB, GL_FLOAT, &ssaoNoise[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -299,8 +306,6 @@ void HelloSSAODrawingProgram::Draw()
 	Shader& currentShader = modelDeferredShader;
 	//Draw corridors
 	currentShader.Bind();
-
-
 	currentShader.SetInt("pointLightsNmb", lightNmb);
 	const glm::mat4 projection = glm::perspective(
 		camera.Zoom,
@@ -377,12 +382,16 @@ void HelloSSAODrawingProgram::Draw()
 		ssaoPassShader.SetMat4("projection", projection);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
+		ssaoPassShader.SetInt("gPosition", 0);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gNormal);
+
+		ssaoPassShader.SetInt("gNormal", 1);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gSSAOAlbedo);
-		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, noiseTexture);
+
+		ssaoPassShader.SetInt("texNoise", 2);
+		ssaoPassShader.SetVec2("noiseScale", glm::vec2(config.screenWidth / 4.0f, config.screenHeight / 4.0f));
 		hdrPlane.Draw(); 
 	}
 
@@ -462,7 +471,7 @@ void HelloSSAODrawingProgram::Draw()
 	blurShader.Bind();
 	rmt_BeginOpenGLSample(BlurPassGPU);
 	rmt_BeginCPUSample(BlurPassCPU, 0);
-	for (unsigned int i = 0; i < amount; i++)
+	for (int i = 0; i < amount; i++)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
 		blurShader.SetInt("horizontal", horizontal);
