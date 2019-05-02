@@ -159,8 +159,8 @@ void HelloSSAODrawingProgram::Init()
 	blurShader.CompileSource("shaders/22_hello_bloom/hdr.vert", "shaders/22_hello_bloom/blur.frag");
 
 	modelDeferredShader.CompileSource(
-		"shaders/23_hello_deferred/deferred.vert",
-		"shaders/23_hello_deferred/deferred.frag");
+		"shaders/24_hello_ssao/ssao.vert",
+		"shaders/23_hello_ssao/ssao.frag");
 	lightingPassShader.CompileSource(
 		"shaders/24_hello_ssao/lighting_pass.vert",
 		"shaders/24_hello_ssao/lighting_pass.frag");
@@ -197,7 +197,7 @@ void HelloSSAODrawingProgram::Init()
 	// - ssao color buffer
 	glGenTextures(1, &gSSAOAlbedo);
 	glBindTexture(GL_TEXTURE_2D, gSSAOAlbedo);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gSSAOAlbedo, 0);
@@ -220,7 +220,7 @@ void HelloSSAODrawingProgram::Init()
 
 	glGenTextures(1, &ssaoColorBuffer);
 	glBindTexture(GL_TEXTURE_2D, ssaoColorBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -368,22 +368,23 @@ void HelloSSAODrawingProgram::Draw()
 	rmt_EndCPUSample();//GeometryPassCPU
 	//Ambient occlusion pass
 	glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
+	{
 		glClear(GL_COLOR_BUFFER_BIT);
 		ssaoPassShader.Bind();
 		// Send kernel + rotation 
 		for (unsigned int i = 0; i < 64; ++i)
-		ssaoPassShader.SetVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+			ssaoPassShader.SetVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
 		ssaoPassShader.SetMat4("projection", projection);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, gNormal);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, gAlbedoSpec);
+		glBindTexture(GL_TEXTURE_2D, gSSAOAlbedo);
 		glActiveTexture(GL_TEXTURE3);
 		glBindTexture(GL_TEXTURE_2D, noiseTexture);
-		hdrPlane.Draw();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		hdrPlane.Draw(); 
+	}
 
 	// Blur SSAO texture to remove noise
 		// ------------------------------------

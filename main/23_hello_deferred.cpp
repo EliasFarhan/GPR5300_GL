@@ -50,9 +50,10 @@ private:
 
 	
 	unsigned int gBuffer;
-	unsigned int gPosition, gNormal, gColorSpec, gAlbedoSpec;
+	unsigned int gPosition, gNormal, gAlbedoSpec;
 	unsigned int gRBO;
 	Shader lightingPassShader;
+	float lightDistance = 1.0f;
 	bool deferred = true;
 };
 
@@ -220,7 +221,32 @@ void HelloDeferredDrawingProgram::Draw()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	rmt_EndOpenGLSample();//BindFramebufferGPU
 	rmt_EndCPUSample();//BindFramebufferCPU
+	const glm::mat4 projection = glm::perspective(
+		camera.Zoom,
+		(float)config.screenWidth / config.screenHeight,
+		0.1f, 100.0f);
 	Shader& currentShader = deferred ? modelDeferredShader : modelForwardShader;
+	if (!deferred)
+	{
+		lightShader.Bind();
+		rmt_BeginOpenGLSample(DrawLightsGPU);
+		rmt_BeginCPUSample(DrawLightsCPU, 0);
+		//Draw lights
+		for (int i = 0; i < lightNmb; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, lights[i].position);
+			model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+			lightShader.SetVec3("lightColor", lights[i].color);
+			lightShader.SetMat4("model", model);
+			lightShader.SetMat4("view", camera.GetViewMatrix());
+			lightShader.SetMat4("projection", projection);
+			lightCube.Draw();
+		}
+
+		rmt_EndOpenGLSample();//draw lights
+		rmt_EndCPUSample();
+	}
 	//Draw corridors
 	currentShader.Bind();
 	if (!deferred)
@@ -230,6 +256,7 @@ void HelloDeferredDrawingProgram::Draw()
 		for (int i = 0; i < lightNmb; i++)
 		{
 			lights[i].intensity = lightIntensity;
+			lights[i].distance = lightDistance;
 			lights[i].Bind(currentShader, i);
 		}
 		rmt_EndOpenGLSample();//BindLightsGPU
@@ -237,12 +264,33 @@ void HelloDeferredDrawingProgram::Draw()
 	}
 
 	currentShader.SetInt("pointLightsNmb", lightNmb);
-	const glm::mat4 projection = glm::perspective(
-		camera.Zoom,
-		(float)config.screenWidth / config.screenHeight,
-		0.1f, 100.0f);
+	
 	currentShader.SetMat4("projection", projection);
 	currentShader.SetMat4("view", camera.GetViewMatrix());
+	
+	currentShader.SetFloat("material.shininess", 16.0f);
+	currentShader.SetVec3("viewPos", camera.Position);
+	currentShader.SetFloat("ambientIntensity", 0.2f);
+	rmt_EndOpenGLSample();//BindG_BufferGPU
+	rmt_EndCPUSample();//BindG_BufferCPU
+	rmt_BeginOpenGLSample(DrawModelGPU);
+	rmt_BeginCPUSample(DrawModelCPU, 0);
+	for (int i = 0; i < modelNmb; i++)
+	{
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(
+			0.0f,
+			0.0f,
+			7.5f - (i*50.0f) / modelNmb));
+		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
+		currentShader.SetVec2("texTiling", glm::vec2(1.0f, 1.0f));
+		currentShader.SetMat4("model", model);
+		this->model.Draw(currentShader);
+	}
+	rmt_EndOpenGLSample();//DrawModelGPU
+	rmt_EndCPUSample();//DrawModelCPU
+	rmt_BeginOpenGLSample(DrawCorridorGPU);
+	rmt_BeginCPUSample(DrawCorridorCPU, 0);
 	currentShader.SetVec2("texTiling", glm::vec2(corridorScale[0], corridorScale[1]));
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, corridorDiffuseMap);
@@ -253,13 +301,6 @@ void HelloDeferredDrawingProgram::Draw()
 	currentShader.SetInt("material.texture_diffuse1", 0);
 	currentShader.SetInt("material.texture_normal", 1);
 	currentShader.SetInt("material.texture_specular1", 2);
-	currentShader.SetFloat("material.shininess", 16.0f);
-	currentShader.SetVec3("viewPos", camera.Position);
-	currentShader.SetFloat("ambientIntensity", 0.0f);
-	rmt_EndOpenGLSample();//BindG_BufferGPU
-	rmt_EndCPUSample();//BindG_BufferCPU
-	rmt_BeginOpenGLSample(DrawCorridorGPU);
-	rmt_BeginCPUSample(DrawCorridorCPU, 0);
 	for (int i = 0; i < 4; i++)
 	{
 		const float angles[4] =
@@ -282,22 +323,7 @@ void HelloDeferredDrawingProgram::Draw()
 	}
 	rmt_EndCPUSample();//DrawCorridorCPU
 	rmt_EndOpenGLSample();//DrawCorridorGPU
-	rmt_BeginOpenGLSample(DrawModelGPU);
-	rmt_BeginCPUSample(DrawModelCPU, 0);
-	for(int i = 0; i < modelNmb;i++)
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(
-			0.0f, 
-			0.0f, 
-			7.5f - (i*50.0f) / modelNmb));
-		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
-		currentShader.SetVec2("texTiling", glm::vec2(1.0f, 1.0f));
-		currentShader.SetMat4("model", model);
-		this->model.Draw(currentShader);
-	}
-	rmt_EndOpenGLSample();//DrawModelGPU
-	rmt_EndCPUSample();//DrawModelCPU
+	
 
 	rmt_EndOpenGLSample();//GeometryPassGPU
 	rmt_EndCPUSample();//GeometryPassCPU
@@ -322,6 +348,7 @@ void HelloDeferredDrawingProgram::Draw()
 		for (int i = 0; i < lightNmb; i++)
 		{
 			lights[i].intensity = lightIntensity;
+			lights[i].distance = lightDistance;
 			lights[i].Bind(lightingPassShader, i);
 		}
 		//light pass
@@ -339,26 +366,27 @@ void HelloDeferredDrawingProgram::Draw()
 		//render light in forward rendering
 		hdrPlane.Draw();
 		glEnable(GL_DEPTH_TEST);
-	}
-	lightShader.Bind();
+	
+		lightShader.Bind();
+		rmt_BeginOpenGLSample(DrawLightsGPU);
+		rmt_BeginCPUSample(DrawLightsCPU, 0);
+		//Draw lights
+		for (int i = 0; i < lightNmb; i++)
+		{
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, lights[i].position);
+			model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+			lightShader.SetVec3("lightColor", lights[i].color);
+			lightShader.SetMat4("model", model);
+			lightShader.SetMat4("view", camera.GetViewMatrix());
+			lightShader.SetMat4("projection", projection);
+			lightCube.Draw();
+		}
 
-	rmt_BeginOpenGLSample(DrawLightsGPU);
-	rmt_BeginCPUSample(DrawLightsCPU, 0);
-	//Draw lights
-	for (int i = 0; i < lightNmb;i++)
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, lights[i].position);
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-		lightShader.SetVec3("lightColor", lights[i].color);
-		lightShader.SetMat4("model", model);
-		lightShader.SetMat4("view", camera.GetViewMatrix());
-		lightShader.SetMat4("projection", projection);
-		lightCube.Draw();
+		rmt_EndOpenGLSample();//draw lights
+		rmt_EndCPUSample();
 	}
 
-	rmt_EndOpenGLSample();//draw lights
-	rmt_EndCPUSample();
 	
 	bool horizontal = true, first_iteration = true;
 	int amount = 10;
@@ -418,6 +446,17 @@ void HelloDeferredDrawingProgram::UpdateUi()
 	ImGui::SliderFloat("Exposure", &exposure, 0.1f, 5.0f);
 	ImGui::SliderFloat("Backlight Intensity", &lightIntensity, 0.1f, 500.0f);
 	ImGui::SliderInt("Lights Nmb", &lightNmb, 1, maxLightNmb);
+	ImGui::SliderFloat("Light Max Distance", &lightDistance, 1.0f, 30.0f);
+
+	GLint maxVertexUniforms;
+	glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &maxVertexUniforms);
+	GLint maxFragmentUniforms;
+	glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &maxFragmentUniforms);
+
+	std::string mvu = std::to_string(maxVertexUniforms);
+	std::string mfu = std::to_string(maxFragmentUniforms);
+	std::string text = "Max Vertex Uniforms: " + mvu + "\nMax Fragment Uniforms: " + mfu;
+	ImGui::Text("%s", text.c_str());
 }
 
 int main(int argc, char** argv)

@@ -1,7 +1,7 @@
 layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec3 gNormal;
 layout (location = 2) out vec4 gAlbedoSpec;
-layout (location = 3) out vec4 gSsaoAlbedo;
+layout (location = 3) out float gSsaoAlbedo;
 
 in VS_OUT vs_out;
 
@@ -24,5 +24,5 @@ void main()
     gAlbedoSpec.rgb = texture(material.texture_diffuse1, vs_out.TexCoords).rgb;
     // store specular intensity in gAlbedoSpec's alpha component
     gAlbedoSpec.a = texture(material.texture_specular1, vs_out.TexCoords).r;
-	gSsaoAlbedo.rgb = vec3(0.95);
+	gSsaoAlbedo = 0.95;
 }  

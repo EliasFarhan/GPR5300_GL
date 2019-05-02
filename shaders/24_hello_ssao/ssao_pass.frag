@@ -4,7 +4,7 @@ in vec2 TexCoords;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
-uniform sampler2D gAlbedoSpec;
+uniform sampler2D gSsao;
 uniform sampler2D texNoise;
 
 uniform vec3 samples[64];
@@ -26,7 +26,7 @@ void main()
 	vec3 tangent   = normalize(randomVec - normal * dot(randomVec, normal));
 	vec3 bitangent = cross(normal, tangent);
 	mat3 TBN       = mat3(tangent, bitangent, normal); 
-	vec3 color = texture(gAlbedoSpec, TexCoords).rgb;
+	float color = texture(gSsao, TexCoords).r;
 	float occlusion = 0.0;
 	for(int i = 0; i < kernelSize; ++i)
 	{
@@ -47,5 +47,5 @@ void main()
 		}
 	}
 	occlusion = 1.0 - (occlusion / kernelSize);
-	FragColor = vec4(occlusion * color,1.0);
+	FragColor = vec4(occlusion * color);
 }

@@ -28,6 +28,8 @@ void main()
     				pointQuadratic * (distance * distance)), 1.0); 
 		if(attenuation < 0.01)
 			attenuation = 0.0;
+		if(light.distance < distance)
+			continue;
 
 		vec3 lightDir = normalize(light.position - FragPos);
 		float diff = max(dot(Normal, lightDir), 0.0);

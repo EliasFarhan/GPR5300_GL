@@ -35,7 +35,8 @@ vec3 calculate_point_light(EnginePointLight light, VS_OUT fs_in, EngineMaterial 
 		pointQuadratic * (distance * distance)), 1.0);
 	if(attenuation < 0.01)
 		attenuation = 0.0;
-
+	if (light.distance < distance)
+		return vec3(0,0,0);
 	vec3 lightDir = normalize(light.position - fs_in.FragPos);
     float diff = max(dot(normal, lightDir), 0.0);
     vec3 diffuse = 0.5 * diff * vec3(texture(material.texture_diffuse1, fs_in.TexCoords))* light.color;

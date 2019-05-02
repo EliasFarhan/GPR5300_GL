@@ -223,7 +223,6 @@ void HelloHdrDrawingProgram::Draw()
 		if (first_iteration)
 			first_iteration = false;
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	//Show hdr quad
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	hdrShader.Bind();
