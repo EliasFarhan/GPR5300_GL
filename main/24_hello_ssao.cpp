@@ -20,6 +20,9 @@ public:
 
 	void UpdateUi() override;
 private:
+
+	void DrawScene();
+
 	Shader hdrShader;
 	Plane hdrPlane;
 	unsigned hdrFBO = 0;
@@ -29,7 +32,7 @@ private:
 	Shader modelDeferredShader;
 
 	Plane corridorPlane;
-	float corridorScale[3] = { 1.1f, 100.0f, 1.0f };
+	float corridorScale[3] = { 5.0f, 5.0f, 1.0f };
 	unsigned corridorDiffuseMap = 0;
 	unsigned corridorNormalMap = 0;
 	unsigned corridorSpecularMap = 0;
@@ -38,13 +41,12 @@ private:
 
 	Cube lightCube;
 	Shader lightShader;
-	const int modelNmb = 10;
 
 
 	static const int maxLightNmb = 128;
-	int lightNmb = maxLightNmb;
+	int lightNmb = 1;
 	PointLight lights[maxLightNmb] = {};
-	float exposure = 1.0f;
+	float exposure = 0.1f;
 	float lightIntensity = 1.0f;
 	//blur
 	GLuint pingpongFBO[2];
@@ -67,16 +69,19 @@ private:
 	std::vector<glm::vec3> ssaoKernel;
 	unsigned noiseTexture;
 
+	glm::mat4 projection;
+	float ssaoRadius = 0.5f;
+
 };
 
 void HelloSSAODrawingProgram::Init()
 {
-	programName = "Hello Deferred";
+	programName = "Hello SSAO";
 	auto* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
 	auto& camera = engine->GetCamera();
 
-	camera.Position = glm::vec3(0.0f, 0.0f, 10.0f);
+	camera.Position = glm::vec3(0.0f, 2.0f, 2.0f);
 
 	model.Init("data/models/nanosuit2/nanosuit.obj");
 	corridorPlane.Init();
@@ -159,8 +164,8 @@ void HelloSSAODrawingProgram::Init()
 	blurShader.CompileSource("shaders/22_hello_bloom/hdr.vert", "shaders/22_hello_bloom/blur.frag");
 
 	modelDeferredShader.CompileSource(
-		"shaders/24_hello_ssao/ssao.vert",
-		"shaders/24_hello_ssao/ssao.frag");
+		"shaders/24_hello_ssao/ssao_basic.vert",
+		"shaders/24_hello_ssao/ssao_basic.frag");
 	lightingPassShader.CompileSource(
 		"shaders/24_hello_ssao/lighting_pass.vert",
 		"shaders/24_hello_ssao/lighting_pass.frag");
@@ -176,7 +181,6 @@ void HelloSSAODrawingProgram::Init()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
@@ -233,7 +237,9 @@ void HelloSSAODrawingProgram::Init()
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBuffer, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	ssaoPassShader.CompileSource("shaders/24_hello_ssao/ssao_pass.vert", "shaders/24_hello_ssao/ssao_pass.frag");
+	ssaoPassShader.CompileSource(
+			"shaders/24_hello_ssao/ssao_pass.vert",
+			"shaders/24_hello_ssao/ssao_pass.frag");
 
 	// generate sample kernel
 	// ----------------------
@@ -279,98 +285,30 @@ void HelloSSAODrawingProgram::Init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ssaoColorBufferBlur, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	ssaoBlurPassShader.CompileSource("shaders/24_hello_ssao/ssao_blur.vert", "shaders/24_hello_ssao/ssao_blur.frag");
+	ssaoBlurPassShader.CompileSource(
+			"shaders/24_hello_ssao/ssao_blur.vert",
+			"shaders/24_hello_ssao/ssao_blur.frag");
 }
+
+
 
 void HelloSSAODrawingProgram::Draw()
 {
+
+
 	rmt_BeginOpenGLSample(DrawSceneGPU);
 	rmt_BeginCPUSample(DrawSceneCPU, 0);
 	ProcessInput();
 	auto* engine = Engine::GetPtr();
 	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
-
+	projection = glm::perspective(
+			camera.Zoom,
+			(float)config.screenWidth / config.screenHeight,
+			0.1f, 100.0f);
 	glEnable(GL_DEPTH_TEST);
-	rmt_BeginOpenGLSample(GeometryPassGPU);
-	rmt_BeginCPUSample(GeometryPassCPU, 0);
-	rmt_BeginOpenGLSample(BindG_BufferGPU);
-	rmt_BeginCPUSample(BindG_BufferCPU, 0);
-	rmt_BeginOpenGLSample(BindFramebufferGPU);
-	rmt_BeginCPUSample(BindFramebufferCPU, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
-	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	rmt_EndOpenGLSample();//BindFramebufferGPU
-	rmt_EndCPUSample();//BindFramebufferCPU
-	Shader& currentShader = modelDeferredShader;
-	//Draw corridors
-	currentShader.Bind();
-	currentShader.SetInt("pointLightsNmb", lightNmb);
-	const glm::mat4 projection = glm::perspective(
-		camera.Zoom,
-		(float)config.screenWidth / config.screenHeight,
-		0.1f, 100.0f);
-	currentShader.SetMat4("projection", projection);
-	currentShader.SetMat4("view", camera.GetViewMatrix());
-	currentShader.SetVec2("texTiling", glm::vec2(corridorScale[0], corridorScale[1]));
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, corridorDiffuseMap);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, corridorNormalMap);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, corridorSpecularMap);
-	currentShader.SetInt("material.texture_diffuse1", 0);
-	currentShader.SetInt("material.texture_normal", 1);
-	currentShader.SetInt("material.texture_specular1", 2);
-	currentShader.SetFloat("material.shininess", 16.0f);
-	currentShader.SetVec3("viewPos", camera.Position);
-	currentShader.SetFloat("ambientIntensity", 0.0f);
-	rmt_EndOpenGLSample();//BindG_BufferGPU
-	rmt_EndCPUSample();//BindG_BufferCPU
-	rmt_BeginOpenGLSample(DrawCorridorGPU);
-	rmt_BeginCPUSample(DrawCorridorCPU, 0);
-	for (int i = 0; i < 4; i++)
-	{
-		const float angles[4] =
-		{
-			0.0f,
-			90.0f,
-			180.0f,
-			-90.0f
-		};
-		glm::mat4 model = glm::mat4(1.0f);
-
-		model = glm::translate(model, glm::vec3(0, -1, -1));
-		model = glm::scale(model, glm::vec3(corridorScale[0], corridorScale[1], corridorScale[2]));
-		auto quaternion = glm::quat(glm::vec3(glm::radians(90.0f), 0, glm::radians(angles[i])));
-		model = glm::mat4_cast(quaternion)*model;
-
-
-		currentShader.SetMat4("model", model);
-		corridorPlane.Draw();
-	}
-	rmt_EndCPUSample();//DrawCorridorCPU
-	rmt_EndOpenGLSample();//DrawCorridorGPU
-	rmt_BeginOpenGLSample(DrawModelGPU);
-	rmt_BeginCPUSample(DrawModelCPU, 0);
-	for (int i = 0; i < modelNmb; i++)
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(
-			0.0f,
-			0.0f,
-			7.5f - (i*50.0f) / modelNmb));
-		model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
-		currentShader.SetVec2("texTiling", glm::vec2(1.0f, 1.0f));
-		currentShader.SetMat4("model", model);
-		this->model.Draw(currentShader);
-	}
-	rmt_EndOpenGLSample();//DrawModelGPU
-	rmt_EndCPUSample();//DrawModelCPU
-
-	rmt_EndOpenGLSample();//GeometryPassGPU
-	rmt_EndCPUSample();//GeometryPassCPU
+	DrawScene();
 	//Ambient occlusion pass
 	glBindFramebuffer(GL_FRAMEBUFFER, ssaoFBO);
 	{
@@ -379,6 +317,7 @@ void HelloSSAODrawingProgram::Draw()
 		// Send kernel + rotation 
 		for (unsigned int i = 0; i < 64; ++i)
 			ssaoPassShader.SetVec3("samples[" + std::to_string(i) + "]", ssaoKernel[i]);
+		ssaoPassShader.SetFloat("radius", ssaoRadius);
 		ssaoPassShader.SetMat4("projection", projection);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gPosition);
@@ -518,11 +457,84 @@ void HelloSSAODrawingProgram::UpdateUi()
 	Engine* engine = Engine::GetPtr();
 	auto& camera = engine->GetCamera();
 	ImGui::Separator();
+	ImGui::SliderFloat("SSAO Radius", &ssaoRadius, 0.1f, 1.0f);
 	ImGui::InputFloat3("Corridor Scale", corridorScale);
 	ImGui::InputFloat3("Camera Position", (float*)&camera.Position);
 	ImGui::SliderFloat("Exposure", &exposure, 0.1f, 5.0f);
 	ImGui::SliderFloat("Backlight Intensity", &lightIntensity, 0.1f, 500.0f);
-	ImGui::SliderInt("Lights Nmb", &lightNmb, 1, maxLightNmb);
+	ImGui::SliderInt("Lights Nmb", &lightNmb, 0, maxLightNmb);
+}
+void HelloSSAODrawingProgram::DrawScene()
+{
+	auto* engine = Engine::GetPtr();
+	auto& camera = engine->GetCamera();
+	auto& config = engine->GetConfiguration();
+
+	rmt_BeginOpenGLSample(GeometryPassGPU);
+	rmt_BeginCPUSample(GeometryPassCPU, 0);
+	rmt_BeginOpenGLSample(BindG_BufferGPU);
+	rmt_BeginCPUSample(BindG_BufferCPU, 0);
+	rmt_BeginOpenGLSample(BindFramebufferGPU);
+	rmt_BeginCPUSample(BindFramebufferCPU, 0);
+
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	rmt_EndOpenGLSample();//BindFramebufferGPU
+	rmt_EndCPUSample();//BindFramebufferCPU
+	Shader& currentShader = modelDeferredShader;
+	//Draw corridors
+	currentShader.Bind();
+	currentShader.SetInt("pointLightsNmb", lightNmb);
+
+	currentShader.SetMat4("projection", projection);
+	currentShader.SetMat4("view", camera.GetViewMatrix());
+	currentShader.SetVec2("texTiling", glm::vec2(corridorScale[0], corridorScale[1]));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, corridorDiffuseMap);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, corridorNormalMap);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, corridorSpecularMap);
+	currentShader.SetInt("material.texture_diffuse1", 0);
+	currentShader.SetInt("material.texture_normal", 1);
+	currentShader.SetInt("material.texture_specular1", 2);
+	currentShader.SetFloat("material.shininess", 16.0f);
+	currentShader.SetVec3("viewPos", camera.Position);
+	currentShader.SetFloat("ambientIntensity", 0.0f);
+	rmt_EndOpenGLSample();//BindG_BufferGPU
+	rmt_EndCPUSample();//BindG_BufferCPU
+	rmt_BeginOpenGLSample(DrawCorridorGPU);
+	rmt_BeginCPUSample(DrawCorridorCPU, 0);
+
+	glm::mat4 model = glm::mat4(1.0f);
+
+	model = glm::translate(model, glm::vec3(0, 0, -2));
+	model = glm::scale(model, glm::vec3(corridorScale[0], corridorScale[1], corridorScale[2]));
+
+
+	currentShader.SetMat4("model", model);
+	corridorPlane.Draw();
+
+	rmt_EndCPUSample();//DrawCorridorCPU
+	rmt_EndOpenGLSample();//DrawCorridorGPU
+	rmt_BeginOpenGLSample(DrawModelGPU);
+	rmt_BeginCPUSample(DrawModelCPU, 0);
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(
+			0.0f,
+			0.0f,
+			0.0f));
+	model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+	currentShader.SetVec2("texTiling", glm::vec2(1.0f, 1.0f));
+	currentShader.SetMat4("model", model);
+	this->model.Draw(currentShader);
+
+	rmt_EndOpenGLSample();//DrawModelGPU
+	rmt_EndCPUSample();//DrawModelCPU
+
+	rmt_EndOpenGLSample();//GeometryPassGPU
+	rmt_EndCPUSample();//GeometryPassCPU
 }
 
 int main(int argc, char** argv)
@@ -530,8 +542,8 @@ int main(int argc, char** argv)
 	Engine engine;
 	srand(0);
 	auto& config = engine.GetConfiguration();
-	config.screenWidth = 1024;
-	config.screenHeight = 1024;
+	config.screenWidth = 1280;
+	config.screenHeight = 720;
 	config.windowName = "Hello Deferred";
 	config.bgColor = { 1,1,1,1 };
 	engine.AddDrawingProgram(new HelloSSAODrawingProgram());
