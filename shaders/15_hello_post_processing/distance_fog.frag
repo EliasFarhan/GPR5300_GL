@@ -10,16 +10,12 @@ uniform float zNear = 0.1;
 uniform float fogBegin = 20.0;
 uniform float fogComplete = 30.0;
 
-float linearize(float depth) {
-
-    return (2.0 * zNear) / (zFar + zNear - depth * (zFar - zNear));
-}
 
 void main()
 { 
 	vec4 screenColor = texture(screenTexture, TexCoords);
 	vec4 depthColor = texture(depthTexture, TexCoords);
-	float depthValue = linearize(depthColor.x);
+	float depthValue = linearize(depthColor.x, 0.1, 100.0);
 	
 	vec4 color = mix(screenColor, vec4(fogColor,1.0), depthValue);
 	

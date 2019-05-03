@@ -105,6 +105,11 @@ vec3 calculate_spot_light(EngineSpotLight light, VS_OUT fs_in, EngineMaterial ma
     return light.intensity * intensity * (diffuse + specular);
 }
 
+float linearize(float depth, float zNear, float zFar) {
+
+	return (2.0 * zNear) / (zFar + zNear - depth * (zFar - zNear));
+}
+
 const int MAX_POINT_LIGHT = 128;
 const int MAX_SPOT_LIGHT = 5;
 
@@ -115,6 +120,3 @@ uniform int pointLightsNmb = 0;
 uniform int spotLightsNmb = 0;
 uniform bool directionalLightEnable = false;
 uniform float ambientIntensity = 0.2;
-
-
-

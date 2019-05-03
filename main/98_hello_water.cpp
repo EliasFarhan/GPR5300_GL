@@ -5,6 +5,7 @@
 #include <graphics.h>
 #include <camera.h>
 #include <model.h>
+#include <geometry.h>
 
 #include <Remotery.h>
 #include "file_utility.h"
@@ -19,8 +20,6 @@ using json = nlohmann::json;
 
 class SceneDrawingProgram;
 
-//#define DEBUG_WATA_REFLECTION
-#define REFLECTION_MAP
 class HelloWaterDrawingProgram : public DrawingProgram
 {
 public:
@@ -48,26 +47,22 @@ private:
 	};
 	GLuint waterVAO;
 	GLuint waterVBO;
-	float waterPosition[3]{0,0,0};
-#ifdef REFLECTION_MAP
-	Shader underWaterShader;
-	unsigned int texColorBuffer;
-	unsigned int framebuffer;
-	unsigned int rbo;
+	float waterPosition[3]{0.0f,2.0f,0.0f};
+
+	Shader reflectionModelShader;
+	unsigned int reflectionColorBuffer;
+	unsigned int reflectionBuffer;
+	unsigned int reflectionDepthBuffer;
 	Shader frameBufferShaderProgram;
-	float quadVertices[4 * 6] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-		// positions   // texCoords
-		-1.0f,  1.0f,  1.0f, 1.0f,
-		-1.0f, -1.0f,  1.0f, 0.0f,
-		 1.0f, -1.0f,  0.0f, 0.0f,
+	Plane plane;
 
-		-1.0f,  1.0f,  1.0f, 1.0f,
-		 1.0f, -1.0f,  0.0f, 0.0f,
-		 1.0f,  1.0f,  0.0f, 1.0f
-	};
-	unsigned int quadVAO, quadVBO;
-
-#endif
+	Shader refractionModelShader;
+	unsigned int refractionColorBuffer;
+	unsigned int refractionDepthBuffer;
+	unsigned int refractionBuffer;
+	unsigned int refractionStencilBuffer;
+	unsigned dudvMap;
+	unsigned normalMap;
 };
 
 class SceneDrawingProgram : public DrawingProgram
@@ -78,7 +73,6 @@ public:
 	void Destroy() override;
 	void UpdateUi() override;
 	//Getters for Water Drawing Program
-	Camera* GetCamera() { return &camera; }
 	glm::mat4& GetProjection() { return projection; }
 	std::vector<Model*>& GetModels() { return models; }
 	std::vector<glm::vec3>& GetPositions() { return positions; }
@@ -91,7 +85,6 @@ protected:
 	void ProcessInput();
 	Skybox skybox;
 	Shader modelShader;
-	Camera camera = Camera(glm::vec3(0.0f, 3.0f, 10.0f));
 	glm::mat4 projection = {};
 	const char* jsonPath = "scenes/water.json";
 	json sceneJson;
@@ -116,7 +109,8 @@ void HelloWaterDrawingProgram::Init()
 	auto& drawingPrograms = engine->GetDrawingPrograms();
 
 	scene = dynamic_cast<SceneDrawingProgram*>(drawingPrograms[0]);
-	sceneCamera = scene->GetCamera();
+	sceneCamera = &engine->GetCamera();
+	sceneCamera->Position = glm::vec3(0.0f, 3.0f, 10.0f);
 	basicShader.CompileSource(
 		"shaders/engine/basic.vert",
 		"shaders/engine/basic.frag");
@@ -138,48 +132,72 @@ void HelloWaterDrawingProgram::Init()
 
 	glBindVertexArray(0);
 
-#ifdef REFLECTION_MAP
-	underWaterShader.CompileSource(
-		"shaders/98_hello_water/water_scene.vert", 
-		"shaders/98_hello_water/water_scene.frag");
-	shaders.push_back(&underWaterShader);
+	//screen quad
+	plane.Init();
+	dudvMap = stbCreateTexture("data/sprites/waveDUDV.png");
+	normalMap = stbCreateTexture("data/sprites/waveNM.png");
+	reflectionModelShader.CompileSource(
+		"shaders/98_hello_water/reflection.vert", 
+		"shaders/98_hello_water/reflection.frag");
+	shaders.push_back(&reflectionModelShader);
 	
 	//Generate under water refelction map framebuffer
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glGenFramebuffers(1, &reflectionBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, reflectionBuffer);
 
-	glGenTextures(1, &texColorBuffer);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glGenTextures(1, &reflectionColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, reflectionColorBuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, reflectionColorBuffer, 0);
 
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glGenRenderbuffers(1, &reflectionDepthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, reflectionDepthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, config.screenWidth, config.screenHeight);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, reflectionDepthBuffer);
 	frameBufferShaderProgram.CompileSource(
-		"shaders/15_hello_post_processing/frame.vert",
-		"shaders/15_hello_post_processing/frame.frag"
+		"shaders/98_hello_water/blending.vert",
+		"shaders/98_hello_water/blending.frag"
 	);
 	
-	//screen quad
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-	glBindVertexArray(0);
+	//Generate under water refelction map framebuffer
+	refractionModelShader.CompileSource(
+		"shaders/98_hello_water/refraction.vert",
+		"shaders/98_hello_water/refraction.frag");
+	shaders.push_back(&refractionModelShader);
+	glGenFramebuffers(1, &refractionBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, refractionBuffer);
 
-#endif
+	glGenTextures(1, &refractionColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, refractionColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, config.screenWidth, config.screenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, refractionColorBuffer, 0);
+
+	glGenTextures(1, &refractionDepthBuffer);
+	glBindTexture(GL_TEXTURE_2D, refractionDepthBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
+		config.screenWidth, config.screenHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glBindFramebuffer(GL_FRAMEBUFFER, refractionBuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, refractionDepthBuffer, 0);
+
+	glGenRenderbuffers(1, &refractionStencilBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, refractionStencilBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX1, config.screenWidth, config.screenHeight);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, refractionDepthBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 }
 
@@ -189,132 +207,156 @@ void HelloWaterDrawingProgram::Draw()
 	rmt_ScopedCPUSample(DrawWaterCPU, 0);
 	Engine* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
-
-
-	//Invert Camera
-	underWaterCamera.Front = glm::reflect(sceneCamera->Front, glm::vec3(0.0f, 1.0f, 0.0f));
-	underWaterCamera.Up = glm::reflect(sceneCamera->Up, glm::vec3(0.0f, 1.0f, 0.0f));
-	underWaterCamera.Position = sceneCamera->Position;
-	underWaterCamera.Position.y = underWaterCamera.Position.y-2*abs(underWaterCamera.Position.y-waterPosition[1]);
-#ifdef REFLECTION_MAP
-	//Under Water framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//Stencil pass
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-	glStencilMask(0xFF); // Write to stencil buffer
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glDepthMask(GL_FALSE);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-	//Draw water plane on stencil buffer
-	basicShader.Bind();
-	glm::mat4 stencilWaterModel = glm::mat4(1.0f);
-	stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
-
-	stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
-
-	basicShader.SetMat4("model", stencilWaterModel);
-	basicShader.SetMat4("view", underWaterCamera.GetViewMatrix());
-	basicShader.SetMat4("projection", scene->GetProjection());
-	
-	glBindVertexArray(waterVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDepthMask(GL_TRUE);
-	glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
-	glStencilMask(0x00); //Not reading stencil anymore
-	//Draw scene on top of water in reflection map
-	underWaterShader.Bind();
-	underWaterShader.SetFloat("waterHeight", waterPosition[1]);
-	underWaterShader.SetMat4("projection", scene->GetProjection());
-	underWaterShader.SetMat4("view", underWaterCamera.GetViewMatrix());
-	for(auto i = 0l; i < scene->GetModelNmb();i++)
-	{
-		glm::mat4 modelMatrix(1.0f);
-		modelMatrix = glm::translate(modelMatrix, scene->GetPositions()[i]);
-		modelMatrix = glm::scale(modelMatrix, scene->GetScales()[i]);
-		glm::quat quaternion = glm::quat(scene->GetRotations()[i]);
-		modelMatrix = glm::mat4_cast(quaternion)*modelMatrix;
-
-		underWaterShader.SetMat4("model", modelMatrix);
-
-		scene->GetModels()[i]->Draw(underWaterShader);
-	}
 	Skybox& skybox = scene->GetSkybox();
-	const auto underWaterView = underWaterCamera.GetViewMatrix();
-	skybox.SetViewMatrix(underWaterView);
-	skybox.SetProjectionMatrix(scene->GetProjection());
-	skybox.Draw();
-	glDisable(GL_STENCIL_TEST);
-	//Draw the water with the texture generated by the reflection map
-	glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default screen framebuffer
-	glClearColor(config.bgColor.r, config.bgColor.g, config.bgColor.b, 1.0f);
 
-#ifdef DEBUG_WATA_REFLECTION
-	frameBufferShaderProgram.Bind();
+	glm::mat4 stencilWaterModel = glm::mat4(1.0f);
+	//==================REFLECTION==================
+	{
+		//Invert Camera
+		underWaterCamera.Front = glm::reflect(sceneCamera->Front, glm::vec3(0.0f, 1.0f, 0.0f));
+		underWaterCamera.Up = glm::reflect(sceneCamera->Up, glm::vec3(0.0f, 1.0f, 0.0f));
+		underWaterCamera.Position = sceneCamera->Position;
+		underWaterCamera.Position.y = underWaterCamera.Position.y - 2 * abs(underWaterCamera.Position.y - waterPosition[1]);
 
-	frameBufferShaderProgram.SetInt("screenTexture", 0);
-	glDisable(GL_DEPTH_TEST);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-#else
-	//stencil pass on default framebuffer
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-	glStencilMask(0xFF); // Write to stencil buffer
-	glClear(GL_STENCIL_BUFFER_BIT);
-	glDepthMask(GL_FALSE);
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-	//Draw water plane on stencil buffer
-	basicShader.Bind();
+		//Under Water framebuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, reflectionBuffer);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//Stencil pass
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF); // Write to stencil buffer
+		glClear(GL_STENCIL_BUFFER_BIT);
+		glDepthMask(GL_FALSE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//Draw water plane on stencil buffer
+		basicShader.Bind();
+		stencilWaterModel = glm::mat4(1.0f);
+		stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
 
-	basicShader.SetMat4("model", stencilWaterModel);
-	basicShader.SetMat4("view", sceneCamera->GetViewMatrix());
-	basicShader.SetMat4("projection", scene->GetProjection());
+		stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
 
-	glBindVertexArray(waterVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glDepthMask(GL_TRUE);
-	glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
-	glStencilMask(0x00); //Not reading stencil anymore
-	frameBufferShaderProgram.Bind();
+		basicShader.SetMat4("model", stencilWaterModel);
+		basicShader.SetMat4("view", underWaterCamera.GetViewMatrix());
+		basicShader.SetMat4("projection", scene->GetProjection());
 
-	frameBufferShaderProgram.SetInt("screenTexture", 0);
-	glDisable(GL_DEPTH_TEST);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	glDisable(GL_STENCIL_TEST);
-#endif
-#endif
-#ifndef DEBUG_WATA_REFLECTION
-#ifndef REFLECTION_MAP
-	basicShader.Bind();
-	glm::mat4 waterModel = glm::mat4(1.0f);
-	waterModel = glm::translate(waterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
-	waterModel = glm::scale(waterModel, glm::vec3(5.0f, 5.0f, 5.0f));
+		glBindVertexArray(waterVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthMask(GL_TRUE);
+		glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
+		glStencilMask(0x00); //Not reading stencil anymore
+		//Draw scene on top of water in reflection map
+		reflectionModelShader.Bind();
+		reflectionModelShader.SetFloat("waterHeight", waterPosition[1]);
+		reflectionModelShader.SetMat4("projection", scene->GetProjection());
+		reflectionModelShader.SetMat4("view", underWaterCamera.GetViewMatrix());
+		for (auto i = 0l; i < scene->GetModelNmb(); i++)
+		{
+			glm::mat4 modelMatrix(1.0f);
+			modelMatrix = glm::translate(modelMatrix, scene->GetPositions()[i]);
+			modelMatrix = glm::scale(modelMatrix, scene->GetScales()[i]);
+			glm::quat quaternion = glm::quat(scene->GetRotations()[i]);
+			modelMatrix = glm::mat4_cast(quaternion)*modelMatrix;
 
-	basicShader.SetMat4("model", waterModel);
-	basicShader.SetMat4("view", sceneCamera->GetViewMatrix());
-	basicShader.SetMat4("projection", scene->GetProjection());
+			reflectionModelShader.SetMat4("model", modelMatrix);
 
-	glBindVertexArray(waterVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-#endif
-#endif
+			scene->GetModels()[i]->Draw(reflectionModelShader);
+		}
+		
+		const auto underWaterView = underWaterCamera.GetViewMatrix();
+		skybox.SetViewMatrix(underWaterView);
+		skybox.SetProjectionMatrix(scene->GetProjection());
+		skybox.Draw();
+		glDisable(GL_STENCIL_TEST);
+
+	}
+	//==================REFRACTION==================
+	{
+
+		glBindFramebuffer(GL_FRAMEBUFFER, refractionBuffer);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//Stencil pass
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+		glStencilMask(0xFF); // Write to stencil buffer
+		glClear(GL_STENCIL_BUFFER_BIT);
+		glDepthMask(GL_FALSE);
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+		//Draw water plane on stencil buffer
+		basicShader.Bind();
+		stencilWaterModel = glm::mat4(1.0f);
+		stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
+
+		stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
+
+		basicShader.SetMat4("model", stencilWaterModel);
+		basicShader.SetMat4("view", sceneCamera->GetViewMatrix());
+		basicShader.SetMat4("projection", scene->GetProjection());
+
+		glBindVertexArray(waterVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glDepthMask(GL_TRUE);
+		glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
+		glStencilMask(0x00); //Not reading stencil anymore
+		//Draw scene on top of water in reflection map
+		refractionModelShader.Bind();
+		refractionModelShader.SetFloat("waterHeight", waterPosition[1]);
+		refractionModelShader.SetMat4("projection", scene->GetProjection());
+		refractionModelShader.SetMat4("view", sceneCamera->GetViewMatrix());
+		for (auto i = 0l; i < scene->GetModelNmb(); i++)
+		{
+			glm::mat4 modelMatrix(1.0f);
+			modelMatrix = glm::translate(modelMatrix, scene->GetPositions()[i]);
+			modelMatrix = glm::scale(modelMatrix, scene->GetScales()[i]);
+			glm::quat quaternion = glm::quat(scene->GetRotations()[i]);
+			modelMatrix = glm::mat4_cast(quaternion)*modelMatrix;
+
+			refractionModelShader.SetMat4("model", modelMatrix);
+
+			scene->GetModels()[i]->Draw(refractionModelShader);
+		}
+		skybox.SetViewMatrix(sceneCamera->GetViewMatrix());
+		skybox.SetProjectionMatrix(scene->GetProjection());
+		skybox.Draw();
+		glDisable(GL_STENCIL_TEST);
+	}
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		frameBufferShaderProgram.Bind();
+
+		frameBufferShaderProgram.SetMat4("model", stencilWaterModel);
+		frameBufferShaderProgram.SetMat4("projection", scene->GetProjection());
+		frameBufferShaderProgram.SetMat4("view", sceneCamera->GetViewMatrix());
+		frameBufferShaderProgram.SetVec3("viewPos", sceneCamera->Position);
+		frameBufferShaderProgram.SetInt("reflectionMap", 0);
+		frameBufferShaderProgram.SetInt("refractionMap", 1);
+		frameBufferShaderProgram.SetInt("dudvMap", 2);
+		frameBufferShaderProgram.SetInt("depthMap", 3);
+		frameBufferShaderProgram.SetInt("normalMap", 4);
+		frameBufferShaderProgram.SetFloat("timeSinceStart", engine->GetTimeSinceInit());
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, reflectionColorBuffer);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, refractionColorBuffer);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, dudvMap);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, refractionDepthBuffer);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, normalMap);
+
+		glBindVertexArray(waterVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+	}
 }
 
 void HelloWaterDrawingProgram::Destroy()
@@ -332,8 +374,8 @@ void SceneDrawingProgram::Init()
 	programName = "Scene";
 
 	modelShader.CompileSource(
-		"shaders/engine/model.vert", 
-		"shaders/engine/model.frag");
+		"shaders/engine/model_diffuse.vert", 
+		"shaders/engine/model_diffuse.frag");
 	shaders.push_back(&modelShader);
 	const auto jsonText = LoadFile(jsonPath);
 	sceneJson = json::parse(jsonText);
@@ -391,10 +433,11 @@ void SceneDrawingProgram::Init()
 
 void SceneDrawingProgram::Draw()
 {
+	Engine* engine = Engine::GetPtr();
+	Camera& camera = engine->GetCamera();
 	rmt_ScopedOpenGLSample(DrawScene);
 	rmt_ScopedCPUSample(DrawSceneCPU, 0);
 	glEnable(GL_DEPTH_TEST);
-	Engine* engine = Engine::GetPtr();
 	auto& config = engine->GetConfiguration();
 
 	ProcessInput();
@@ -426,11 +469,6 @@ void SceneDrawingProgram::Destroy()
 void SceneDrawingProgram::UpdateUi()
 {
 	ImGui::Separator();
-	float cameraPosition[3];
-	cameraPosition[0] = camera.Position.x;
-	cameraPosition[1] = camera.Position.y;
-	cameraPosition[2] = camera.Position.z;
-	ImGui::InputFloat3("Camera Position", cameraPosition);
 }
 
 void SceneDrawingProgram::ProcessInput()

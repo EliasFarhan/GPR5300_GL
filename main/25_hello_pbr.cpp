@@ -14,6 +14,18 @@ public:
 
 };
 
+void HelloPBRDrawingProgram::Init()
+{
+}
+
+void HelloPBRDrawingProgram::Draw()
+{
+}
+
+void HelloPBRDrawingProgram::Destroy()
+{
+}
+
 
 int main(int argc, char** argv)
 {

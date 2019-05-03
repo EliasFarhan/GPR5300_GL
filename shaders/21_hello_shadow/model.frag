@@ -10,7 +10,7 @@ uniform bool pcf = false;
 
 float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal)
 {
-// perform perspective divide
+	// perform perspective divide
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
