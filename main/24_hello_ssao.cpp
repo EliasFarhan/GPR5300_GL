@@ -544,7 +544,7 @@ int main(int argc, char** argv)
 	auto& config = engine.GetConfiguration();
 	config.screenWidth = 1280;
 	config.screenHeight = 720;
-	config.windowName = "Hello Deferred";
+	config.windowName = "Hello SSAO";
 	config.bgColor = { 1,1,1,1 };
 	engine.AddDrawingProgram(new HelloSSAODrawingProgram());
 	engine.Init();
