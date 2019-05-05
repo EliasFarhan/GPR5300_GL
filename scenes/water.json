@@ -1,10 +1,17 @@
 {
 	"models" : [
-	{
-		"model": "data/models/nanosuit2/nanosuit.obj",
-		"position": [0.0,0.0,0.0],
-		"scale": [0.2,0.2,0.2],
-		"angles": [0.0,0.0,0.0]
-	}
+{
+"model": "data/models/nanosuit2/nanosuit.obj",
+"position": [ 0.0, 0.0, 0.0 ],
+"scale": [ 0.2, 0.2, 0.2 ],
+"angles": [ 0.0, 0.0, 0.0 ]
+},
+{
+"model": "data/models/nanosuit2/nanosuit.obj",
+"position": [ 0.0, 0.0, 0.0 ],
+"scale": [ 0.2, 0.2, 0.2 ],
+"angles": [ 0.0, 0.0, 0.0 ]
+}
+
 	]
 }

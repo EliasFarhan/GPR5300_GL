@@ -51,8 +51,8 @@ void Camera::ProcessMouseMovement(float mouseX, float mouseY, GLboolean constrai
 	if (MouseWrapMode)
 	{
 		SDL_WarpMouseInWindow(window, screenWidth / 2, screenHeight / 2);
-		float xOffset = mouseX - screenWidth / 2.0f;
-		float yOffset = screenHeight / 2.0f - mouseY; // reversed since y-coordinates go from bottom to top
+		float xOffset = mouseX - screenWidth / 2;
+		float yOffset = screenHeight / 2 - mouseY; // reversed since y-coordinates go from bottom to top
 
 		xOffset *= MouseSensitivity;
 		yOffset *= MouseSensitivity;

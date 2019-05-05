@@ -9,23 +9,22 @@ out VS_OUT vs_out;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-
 uniform vec3 viewPos;
-uniform mat4 lightSpaceMatrix;
-uniform float texTiling = 0;
+uniform vec2 texTiling = vec2(1.0,1.0);
+
 
 void main()
 {
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
     vs_out.FragPos = vec3(model * vec4(aPos, 1.0));   
-    vs_out.TexCoords = aTexCoords * texTiling;
+    vs_out.TexCoords = vec2(aTexCoords.x * texTiling.x, aTexCoords.y * texTiling.y);
     vs_out.ViewPos  =  viewPos;
+    vs_out.FragPosLightSpace = vec4(0.0,0.0,0.0,0.0);
     
-    mat3 normalMatrix = transpose(inverse(mat3(model)));
+	mat3 normalMatrix = transpose(inverse(mat3(model)));
     vec3 T = normalize(normalMatrix * aTangent);
     vec3 N = normalize(normalMatrix * aNormal);
     vec3 B = normalize(normalMatrix * aBitangent);
     
 	vs_out.invTBN = mat3(T, B, N);
-    vs_out.FragPosLightSpace = lightSpaceMatrix * vec4(vs_out.FragPos, 1.0);
-    gl_Position = projection * view * model * vec4(aPos, 1.0);
 }
