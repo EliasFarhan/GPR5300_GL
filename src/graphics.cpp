@@ -38,7 +38,7 @@ void Shader::CompileSource(std::string vertexShaderPath, std::string fragmentSha
 	if (!success)
 	{
 		glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-		std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+		std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << vertexShaderPath << std::endl << infoLog << std::endl;
 		return;
 	}
 
@@ -52,7 +52,7 @@ void Shader::CompileSource(std::string vertexShaderPath, std::string fragmentSha
 	if (!success)
 	{
 		glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-		std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+		std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << fragmentShaderPath << std::endl<< infoLog << std::endl;
 		return;
 	}
 
@@ -64,7 +64,7 @@ void Shader::CompileSource(std::string vertexShaderPath, std::string fragmentSha
 	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
 	if (!success) {
 		glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-		std::cerr << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infoLog << std::endl;
+		std::cerr << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << vertexShaderPath << std::endl << fragmentShaderPath << std::endl <<infoLog << std::endl;
 		return;
 	}
 

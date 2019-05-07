@@ -22,3 +22,18 @@ private:
 	unsigned cubeVAO;
 	unsigned cubeVBO;
 };
+
+class Sphere
+{
+public:
+    void Init();
+    void Draw();
+private:
+    std::vector<float> vertices;
+    unsigned sphereVAO = 0;
+    unsigned sphereVBO = 0;
+    unsigned sphereEBO = 0;
+
+    unsigned int indexCount;
+
+};
