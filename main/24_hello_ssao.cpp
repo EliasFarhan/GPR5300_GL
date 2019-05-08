@@ -296,8 +296,7 @@ void HelloSSAODrawingProgram::Draw()
 {
 
 
-	rmt_BeginOpenGLSample(DrawSceneGPU);
-	rmt_BeginCPUSample(DrawSceneCPU, 0);
+	
 	ProcessInput();
 	auto* engine = Engine::GetPtr();
 	auto& camera = engine->GetCamera();
@@ -345,8 +344,7 @@ void HelloSSAODrawingProgram::Draw()
 
 	//Light pass
 	{
-		rmt_ScopedOpenGLSample(DeferredLigtingPassGPU);
-		rmt_ScopedCPUSample(DeferredLigtingPassCPU, 0);
+		
 
 		glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
 		glDisable(GL_DEPTH_TEST);
@@ -387,8 +385,7 @@ void HelloSSAODrawingProgram::Draw()
 	}
 	lightShader.Bind();
 
-	rmt_BeginOpenGLSample(DrawLightsGPU);
-	rmt_BeginCPUSample(DrawLightsCPU, 0);
+	
 	//Draw lights
 	for (int i = 0; i < lightNmb; i++)
 	{
@@ -402,14 +399,10 @@ void HelloSSAODrawingProgram::Draw()
 		lightCube.Draw();
 	}
 
-	rmt_EndOpenGLSample();//draw lights
-	rmt_EndCPUSample();
-
+	
 	bool horizontal = true, first_iteration = true;
 	int amount = 10;
 	blurShader.Bind();
-	rmt_BeginOpenGLSample(BlurPassGPU);
-	rmt_BeginCPUSample(BlurPassCPU, 0);
 	for (int i = 0; i < amount; i++)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
@@ -424,11 +417,7 @@ void HelloSSAODrawingProgram::Draw()
 		if (first_iteration)
 			first_iteration = false;
 	}
-	rmt_EndCPUSample();//BlurPassCPU
-	rmt_EndOpenGLSample();//BlurPassGPU
-
-	rmt_BeginCPUSample(DefaultFramebufferCPU, 0);
-	rmt_BeginOpenGLSample(DefaultFramebufferGPU);
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	//Show hdr quad
 	hdrShader.Bind();
@@ -441,10 +430,7 @@ void HelloSSAODrawingProgram::Draw()
 	hdrShader.SetInt("bloomBlur", 1);
 	hdrShader.SetFloat("exposure", exposure);
 	hdrPlane.Draw();
-	rmt_EndOpenGLSample();//DefaultFramebufferGPU
-	rmt_EndCPUSample();//DefaultFramebufferCPU
-	rmt_EndOpenGLSample();//DrawSceneGPU
-	rmt_EndCPUSample();//DrawSceneCPU
+	
 
 }
 
@@ -470,17 +456,11 @@ void HelloSSAODrawingProgram::DrawScene()
 	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
 
-	rmt_BeginOpenGLSample(GeometryPassGPU);
-	rmt_BeginCPUSample(GeometryPassCPU, 0);
-	rmt_BeginOpenGLSample(BindG_BufferGPU);
-	rmt_BeginCPUSample(BindG_BufferCPU, 0);
-	rmt_BeginOpenGLSample(BindFramebufferGPU);
-	rmt_BeginCPUSample(BindFramebufferCPU, 0);
+
 
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	rmt_EndOpenGLSample();//BindFramebufferGPU
-	rmt_EndCPUSample();//BindFramebufferCPU
+	
 	Shader& currentShader = modelDeferredShader;
 	//Draw corridors
 	currentShader.Bind();
@@ -501,11 +481,7 @@ void HelloSSAODrawingProgram::DrawScene()
 	currentShader.SetFloat("material.shininess", 16.0f);
 	currentShader.SetVec3("viewPos", camera.Position);
 	currentShader.SetFloat("ambientIntensity", 0.0f);
-	rmt_EndOpenGLSample();//BindG_BufferGPU
-	rmt_EndCPUSample();//BindG_BufferCPU
-	rmt_BeginOpenGLSample(DrawCorridorGPU);
-	rmt_BeginCPUSample(DrawCorridorCPU, 0);
-
+	
 	glm::mat4 model = glm::mat4(1.0f);
 
 	model = glm::translate(model, glm::vec3(0, 0, -2));
@@ -515,10 +491,7 @@ void HelloSSAODrawingProgram::DrawScene()
 	currentShader.SetMat4("model", model);
 	corridorPlane.Draw();
 
-	rmt_EndCPUSample();//DrawCorridorCPU
-	rmt_EndOpenGLSample();//DrawCorridorGPU
-	rmt_BeginOpenGLSample(DrawModelGPU);
-	rmt_BeginCPUSample(DrawModelCPU, 0);
+	
 
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(
@@ -530,11 +503,6 @@ void HelloSSAODrawingProgram::DrawScene()
 	currentShader.SetMat4("model", model);
 	this->model.Draw(currentShader);
 
-	rmt_EndOpenGLSample();//DrawModelGPU
-	rmt_EndCPUSample();//DrawModelCPU
-
-	rmt_EndOpenGLSample();//GeometryPassGPU
-	rmt_EndCPUSample();//GeometryPassCPU
 }
 
 int main(int argc, char** argv)

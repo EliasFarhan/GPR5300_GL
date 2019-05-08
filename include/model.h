@@ -21,7 +21,7 @@ public:
 	{
 		loadModel(path);
 	}
-	void Draw(Shader shader);
+	void Draw(Shader& shader);
 private:
 
 	/*  Functions   */
