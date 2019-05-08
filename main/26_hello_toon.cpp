@@ -26,8 +26,7 @@ private:
 	int lightNmb = 1;
 	float lightIntensity = 1.0f;
 	float lightDistance = 15.0f;
-	float litOutlineThickness = 0.1f;
-	float unlitOutlineThickness = 0.4f;
+	int toonLayers = 4;
 	PointLight lights[maxLightNmb] = {};
 	glm::vec3 lightsPositions[maxLightNmb] = {};
 	bool toonShading = true;
@@ -90,8 +89,7 @@ void HelloToonDrawingProgram::Draw()
 		lights[i].Bind(currentShader, i);
 	}
 	currentShader.SetInt("pointLightsNmb", lightNmb);
-	currentShader.SetFloat("litOutlineThickness", litOutlineThickness);
-	currentShader.SetFloat("unlitOutlineThickness", unlitOutlineThickness);
+	currentShader.SetInt("toonLayers", toonLayers);
 	nanoModel.Draw(currentShader);
 
 	modelMat = glm::mat4(1.0f);
@@ -110,8 +108,7 @@ void HelloToonDrawingProgram::UpdateUi()
 	ImGui::Checkbox("Toon Shading", &toonShading);
 	ImGui::SliderFloat("Light Intensity", &lightIntensity, 0.5f, 10.0f);
 	ImGui::Checkbox("Rotating Lights", &rotatingLight);
-	ImGui::SliderFloat("litOutlineThickness", &litOutlineThickness, 0.001f, 1.0f);
-	ImGui::SliderFloat("unlitOutlineThickness", &unlitOutlineThickness, litOutlineThickness, 1.0f);
+	ImGui::SliderInt("Toon Layers", &toonLayers, 2, 10);
 
 }
 

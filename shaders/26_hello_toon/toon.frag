@@ -4,11 +4,13 @@ in VS_OUT vs_out;
 in vec3 Normal;
 
 uniform EngineMaterial material;
-uniform vec4 unlitColor = vec4(0.5,0.5,0.5,1);
-uniform vec4 litColor = vec4(0.75,0.75,0.75,1);
+uniform vec4 unlitColor = vec4(0.25,0.25,0.25,1);
+uniform vec4 litColor = vec4(1,1,1,1);
 uniform float diffuseThreshold = 0.5;
-uniform vec4 specColor = vec4(1,1,1,1); 
+uniform vec4 specColor = vec4(2,2,2,1); 
 uniform float shininess = 32.0;
+uniform int toonLayers = 4;
+
 
 
 void main()
@@ -36,22 +38,12 @@ void main()
 		vec3 fragmentColor = vec3(unlitColor); 
             
         // low priority: diffuse illumination
-        if (attenuation * max(0.0, dot(normal, lightDir)) >= diffuseThreshold)
-        {
-            fragmentColor = vec3(litColor); 
-        }
-        
-       
-        vec3 reflectDir = reflect(-lightDir, normal);  
-		vec3 halfwayDir = normalize(lightDir + viewDir);
-		float spec = pow(max(dot(normal, halfwayDir), 0.0), shininess);
-        // highest priority: highlights
-        if (dot(normal, lightDir) > 0.0 
-            // light source on the right side?
-            && attenuation *  spec > 0.5) 
-               // more than half highlight intensity? 
+		for(int i = 0; i < toonLayers; i++)
 		{
-			fragmentColor = vec3(specColor);
+			if (attenuation * max(0.0, dot(normal, lightDir)) >= 0.5+1.0*i/toonLayers/2.0)
+			{
+				fragmentColor = vec3(litColor)*(unlitColor.r+(1.0-unlitColor.r)*i/toonLayers); 
+			}
 		}
 		currentLightColor = fragmentColor;
           
