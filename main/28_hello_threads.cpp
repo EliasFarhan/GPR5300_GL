@@ -30,12 +30,20 @@ struct Scene
 struct SceneBuffer
 {
 	std::vector<glm::vec3> positions = std::vector<glm::vec3>(planetNmb);
+	Camera camera;
 };
 
 struct CommandBuffer
 {
 	size_t length = 0;
+	Camera camera;
 	std::vector<glm::vec3> positions = std::vector<glm::vec3>(planetNmb);
+};
+
+struct BoundingSphere
+{
+	glm::vec3 center = glm::vec3(0.0f);
+	float radius = 0.0f;
 };
 
 class HelloInstancingDrawingProgram : public DrawingProgram
@@ -70,9 +78,11 @@ private:
 	std::atomic<bool> isFinish = false;
 	std::atomic<bool> threadStarted[3] = {false, false, false};
 
+	std::vector<BoundingSphere> boundingSpheres = std::vector<BoundingSphere>(planetNmb);
 	int frameIndex[3] = { 0, 0, 0 };
 	int index = 0;
-
+	const float zNear = 0.1f;
+	const float zFar = 2000.0f;
 };
 
 void HelloInstancingDrawingProgram::Init()
@@ -82,7 +92,7 @@ void HelloInstancingDrawingProgram::Init()
 	camera.Position = glm::vec3(500.0f, 100.0f, 500.0f);
 	programName = "Hello Instancing";
 
-	asteroidModel.Init("data/models/rocks01/rock_01.obj");
+	asteroidModel.Init("data/models/rocks01/rock_01.obj", true);
 	modelShader.CompileSource(
 		"shaders/17_hello_instancing/model_instancing_opti.vert",
 		"shaders/17_hello_instancing/model_instancing.frag"
@@ -92,14 +102,14 @@ void HelloInstancingDrawingProgram::Init()
 
 	sceneBuffers = new SceneBuffer[2];
 	commandBuffers = new CommandBuffer[2];
-	//const std::uniform_real_distribution<GLfloat> randomRadius(100.0f,300.0f); // generates random floats between 0.0 and 1.0
-	//std::default_random_engine generator;
-	//const std::uniform_real_distribution<GLfloat> randomAngle(0.0f, 360.0f); // generates random floats between 0.0 and 1.0
+	const std::uniform_real_distribution<GLfloat> randomRadius(100.0f,500.0f); // generates random floats between 0.0 and 1.0
+	std::default_random_engine generator;
+	const std::uniform_real_distribution<GLfloat> randomAngle(0.0f, 360.0f); // generates random floats between 0.0 and 1.0
 
 	for (auto i = 0u; i < planetNmb; i++)
 	{
-		const float radius = RandomRange(100,300);
-		const float angle = RandomRange(0,359);
+		const float radius = randomRadius(generator);
+		const float angle = randomAngle(generator);
 		const glm::vec3 position = glm::vec3(0.0f, 0.0f, 1.0f);
 		scene.positions[i] = glm::rotate(position, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
 		scene.positions[i] *= radius;
@@ -138,15 +148,8 @@ void HelloInstancingDrawingProgram::Draw()
 	glEnable(GL_DEPTH_TEST);
 	ProcessInput();
 	Engine* engine = Engine::GetPtr();
-	auto& camera = engine->GetCamera();
 	auto& config = engine->GetConfiguration();
 
-	const glm::mat4 projection = glm::perspective(
-		glm::radians(camera.Zoom),
-		(float)config.screenWidth / (float)config.screenHeight,
-		0.1f,
-		1000.0f);
-	const glm::mat4 view = camera.GetViewMatrix();
 
 	//Get current command buffer
 	const bool multiReady = (threadStarted[ThreadId::Culling] && threadStarted[ThreadId::App]);
@@ -162,6 +165,12 @@ void HelloInstancingDrawingProgram::Draw()
 	{
 		CommandBuffer& commandBuffer = commandBuffers[frameIndex[Render]%2];
 
+		const glm::mat4 projection = glm::perspective(
+			glm::radians(commandBuffer.camera.Zoom),
+			(float)config.screenWidth / (float)config.screenHeight,
+			zNear,
+			zFar);
+		const glm::mat4 view = commandBuffer.camera.GetViewMatrix();
 		modelShader.Bind();
 		modelShader.SetMat4("projection", projection);
 		modelShader.SetMat4("view", view);
@@ -262,7 +271,8 @@ void HelloInstancingDrawingProgram::App()
 			}
 
 			SceneBuffer& sceneBuffer = sceneBuffers[frameIndex[ThreadId::App] % 2];
-			memcpy(&sceneBuffer.positions[0], &scene.positions[0], sizeof(glm::vec3)*planetNmb);
+			memcpy(&sceneBuffer.positions[0], &scene.positions[0], sizeof(glm::vec3) * planetNmb);
+			sceneBuffer.camera = camera;
 			threadStarted[ThreadId::App] = true;
 		}
 		
@@ -271,6 +281,9 @@ void HelloInstancingDrawingProgram::App()
 
 void HelloInstancingDrawingProgram::Culling()
 {
+	Engine* engine = Engine::GetPtr();
+	auto& camera = engine->GetCamera();
+	auto& config = engine->GetConfiguration();
 	threadStarted[ThreadId::Culling] = true;
 	while (!isFinish)
 	{
@@ -284,11 +297,82 @@ void HelloInstancingDrawingProgram::Culling()
 			rmt_ScopedCPUSample(CullingCPU, 0);
 
 			const int i = frameIndex[ThreadId::Culling] % 2;
+			const SceneBuffer& sceneBuffer = sceneBuffers[i];
+			//Generate the list of spheres
+			for(size_t j = 0; j < planetNmb; j++)
+			{
+
+				BoundingSphere& boundingSphere = boundingSpheres[j];
+				boundingSphere.center = glm::translate(glm::mat4(1.0f), sceneBuffer.positions[j]) 
+				* glm::vec4(asteroidModel.modelCenter, 1.0f);
+				boundingSphere.radius = asteroidModel.modelRadius*asteroidScale;
+			}
+			//frustum culling
+			size_t planetCount = 0;
+
 			CommandBuffer& commandBuffer = commandBuffers[i];
-			//TODO near far culling
-			//TODO view frustum culling
-			memcpy(&commandBuffer.positions[0], &sceneBuffers[i].positions[0], sizeof(glm::vec3)*planetNmb);
-			commandBuffer.length = planetNmb;
+			for(size_t j = 0; j < planetNmb; j++)
+			{
+				BoundingSphere& boundingSphere = boundingSpheres[j];
+				glm::vec3 cameraToSphere = boundingSphere.center - sceneBuffer.camera.Position;
+				//near culling
+				if(glm::dot(cameraToSphere, sceneBuffer.camera.Front*zNear) / zNear < zNear - boundingSphere.radius)
+				{
+					continue;
+				}
+				//far culling
+				if (glm::dot(cameraToSphere, sceneBuffer.camera.Front*zFar) / zFar > zFar + boundingSphere.radius)
+				{
+					continue;
+				}
+				const float aspect = (float)config.screenWidth / (float)config.screenHeight;
+				//left culling
+				{
+					const glm::vec3 leftDir = glm::normalize(
+						glm::rotate(sceneBuffer.camera.Front, glm::radians(camera.Zoom) / 2.0f*aspect, sceneBuffer.camera.Up));
+					const glm::vec3 leftNormal = glm::normalize(-glm::cross(leftDir, sceneBuffer.camera.Up));
+					if (glm::dot(cameraToSphere, leftNormal) > boundingSphere.radius)
+					{
+						continue;
+					}
+				}
+				//right culling
+				{
+					const glm::vec3 rightDir = glm::normalize(
+						glm::rotate(sceneBuffer.camera.Front, -glm::radians(camera.Zoom) / 2.0f * aspect, sceneBuffer.camera.Up));
+					const glm::vec3 rightNormal = glm::normalize(glm::cross(rightDir, sceneBuffer.camera.Up));
+					if (glm::dot(cameraToSphere, rightNormal) > boundingSphere.radius)
+					{
+						continue;
+					}
+				}
+				//up culling
+				{
+					const glm::vec3 upDir = glm::normalize(
+						glm::rotate(sceneBuffer.camera.Front, -glm::radians(camera.Zoom) / 2.0f, sceneBuffer.camera.Right));
+					const glm::vec3 upNormal = glm::normalize(-glm::cross(upDir, sceneBuffer.camera.Right));
+					if (glm::dot(cameraToSphere, upNormal) < -boundingSphere.radius)
+					{
+						continue;
+					}
+				}
+				//down culling
+				{
+					const glm::vec3 downDir = glm::normalize(
+						glm::rotate(sceneBuffer.camera.Front, glm::radians(camera.Zoom) / 2.0f, sceneBuffer.camera.Right));
+					const glm::vec3 downNormal = glm::normalize(glm::cross(downDir, sceneBuffer.camera.Right));
+					if (glm::dot(cameraToSphere, downNormal) < -boundingSphere.radius)
+					{
+						continue;
+					}
+				}
+
+				commandBuffer.positions[planetCount] = sceneBuffer.positions[j];
+				planetCount++;
+				
+			}
+			commandBuffer.camera = sceneBuffer.camera;
+			commandBuffer.length = planetCount;
 			threadStarted[ThreadId::Culling] = true;
 		}
 	}
@@ -303,6 +387,7 @@ int main(int argc, char** argv)
 	config.screenHeight = 1024;
 	config.windowName = "Hello Instancing";
 	config.bgColor = { 1,1,1,1 };
+	config.vsync = true;
 	engine.AddDrawingProgram(new HelloInstancingDrawingProgram());
 
 	srand(0);
