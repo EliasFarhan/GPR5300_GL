@@ -180,7 +180,7 @@ int main(int argc, char** argv)
 	config.screenWidth = 1280;
 	config.screenHeight = 720;
 	config.windowName = "Hello PBR";
-	config.bgColor = { 0,0,0,0 };
+	config.bgColor = { 1,1,1,0 };
 	engine.AddDrawingProgram(new HelloPBRDrawingProgram());
 	engine.Init();
 	engine.GameLoop();

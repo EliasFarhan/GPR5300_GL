@@ -6,8 +6,6 @@ in vec3 Normal;
 uniform EngineMaterial material;
 uniform vec4 unlitColor = vec4(0.25,0.25,0.25,1);
 uniform vec4 litColor = vec4(1,1,1,1);
-uniform float diffuseThreshold = 0.5;
-uniform vec4 specColor = vec4(2,2,2,1); 
 uniform float shininess = 32.0;
 uniform int toonLayers = 4;
 
@@ -25,11 +23,7 @@ void main()
 	
 	for(int i = 0; i < pointLightsNmb;i++)
 	{
-		vec3 currentLightColor = calculate_point_light(
-			pointLights[i], 
-			vs_out, 
-			material, 
-			normal);
+		vec3 currentLightColor;
 		vec3 viewDir = normalize(vs_out.ViewPos - vs_out.FragPos);
         vec3 lightDir = pointLights[i].position - vs_out.FragPos;
         float attenuation = pointLights[i].distance / length(lightDir);

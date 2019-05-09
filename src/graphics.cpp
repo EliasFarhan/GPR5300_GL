@@ -409,10 +409,11 @@ unsigned LoadCubemap(std::vector<std::string>& faces)
 	for (unsigned int i = 0; i < faces.size(); i++)
 	{
 		unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+		std::string extension = GetFilenameExtension(faces[i]);
 		if (data)
 		{
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+				0, extension == ".hdr"?GL_RGB16F:GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
 			);
 			stbi_image_free(data);
 		}
