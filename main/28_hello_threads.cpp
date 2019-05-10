@@ -265,6 +265,7 @@ void HelloInstancingDrawingProgram::App()
 			
 			CalculateForce();
 			CalculateVelocity();
+			rmt_BeginCPUSample(CopyPositionCPU, 0);
 			for (auto i = 0u; i < planetNmb; i++)
 			{
 				scene.positions[i] += scene.velocities[i] * engine->GetDeltaTime();
@@ -273,6 +274,7 @@ void HelloInstancingDrawingProgram::App()
 			SceneBuffer& sceneBuffer = sceneBuffers[frameIndex[ThreadId::App] % 2];
 			memcpy(&sceneBuffer.positions[0], &scene.positions[0], sizeof(glm::vec3) * planetNmb);
 			sceneBuffer.camera = camera;
+			rmt_EndCPUSample();
 			threadStarted[ThreadId::App] = true;
 		}
 		
@@ -315,17 +317,19 @@ void HelloInstancingDrawingProgram::Culling()
 			size_t planetCount = 0;
 
 			CommandBuffer& commandBuffer = commandBuffers[i];
-			commandBuffer.camera.updateCameraVectors();
-			const float aspect = (float)config.screenWidth / (float)config.screenHeight;
+			const float aspect = static_cast<float>(config.screenWidth) / static_cast<float>(config.screenHeight);
 			const glm::vec3 leftDir = glm::normalize(
 				glm::rotate(sceneBuffer.camera.Front, glm::radians(camera.Zoom) / 2.0f * aspect, sceneBuffer.camera.Up));
 			const glm::vec3 leftNormal = glm::normalize(glm::cross(leftDir, sceneBuffer.camera.Up));
+			
 			const glm::vec3 rightDir = glm::normalize(
 				glm::rotate(sceneBuffer.camera.Front, -glm::radians(camera.Zoom) / 2.0f * aspect, sceneBuffer.camera.Up));
 			const glm::vec3 rightNormal = glm::normalize(-glm::cross(rightDir, sceneBuffer.camera.Up));
+			
 			const glm::vec3 upDir = glm::normalize(
 				glm::rotate(sceneBuffer.camera.Front, -glm::radians(camera.Zoom) / 2.0f, sceneBuffer.camera.Right));
 			const glm::vec3 upNormal = glm::normalize(glm::cross(upDir, sceneBuffer.camera.Right));
+			
 			const glm::vec3 downDir = glm::normalize(
 				glm::rotate(sceneBuffer.camera.Front, glm::radians(camera.Zoom) / 2.0f, sceneBuffer.camera.Right));
 			const glm::vec3 downNormal = glm::normalize(-glm::cross(downDir, sceneBuffer.camera.Right));
@@ -344,25 +348,25 @@ void HelloInstancingDrawingProgram::Culling()
 					continue;
 				}
 				//left culling
-				if (glm::dot(cameraToSphere, leftNormal) < -boundingSphere.radius)
+				if (glm::dot(cameraToSphere, leftNormal) < boundingSphere.radius)
 				{
 					continue;
 				}
 				
 				//right culling
-				if (glm::dot(cameraToSphere, rightNormal) < -boundingSphere.radius)
+				if (glm::dot(cameraToSphere, rightNormal) < boundingSphere.radius)
 				{
 					continue;
 				}
 				
 				//up culling
-				if (glm::dot(cameraToSphere, upNormal) > boundingSphere.radius)
+				if (glm::dot(cameraToSphere, upNormal) > -boundingSphere.radius)
 				{
 					continue;
 				}
 				
 				//down culling
-				if (glm::dot(cameraToSphere, downNormal) > boundingSphere.radius)
+				if (glm::dot(cameraToSphere, downNormal) > -boundingSphere.radius)
 				{
 					continue;
 				}
