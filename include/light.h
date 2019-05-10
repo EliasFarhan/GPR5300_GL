@@ -7,6 +7,7 @@
 class Light
 {
 public:
+	Light() = default;
 	virtual ~Light() = default;
 
 	virtual void Bind(Shader& shader, int index = 0) = 0;
@@ -21,7 +22,7 @@ class DirectionLight : public Light
 {
 public:
 	void Bind(Shader& shader, int index) override;
-	glm::vec3 direction;
+	glm::vec3 direction = glm::vec3(1,0,0);
 };
 
 class PointLight : public Light

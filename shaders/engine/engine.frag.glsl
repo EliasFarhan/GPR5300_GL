@@ -120,3 +120,9 @@ uniform int pointLightsNmb = 0;
 uniform int spotLightsNmb = 0;
 uniform bool directionalLightEnable = false;
 uniform float ambientIntensity = 0.2;
+
+
+
+
+
+

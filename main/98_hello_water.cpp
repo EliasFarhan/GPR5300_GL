@@ -196,7 +196,7 @@ void HelloWaterDrawingProgram::Init()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX1, config.screenWidth, config.screenHeight);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, refractionDepthBuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, refractionDepthBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 }
@@ -222,32 +222,7 @@ void HelloWaterDrawingProgram::Draw()
 		glBindFramebuffer(GL_FRAMEBUFFER, reflectionBuffer);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//Stencil pass
-		glEnable(GL_STENCIL_TEST);
-		glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF); // Write to stencil buffer
-		glClear(GL_STENCIL_BUFFER_BIT);
-		glDepthMask(GL_FALSE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		//Draw water plane on stencil buffer
-		basicShader.Bind();
-		stencilWaterModel = glm::mat4(1.0f);
-		stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
 
-		stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
-
-		basicShader.SetMat4("model", stencilWaterModel);
-		basicShader.SetMat4("view", underWaterCamera.GetViewMatrix());
-		basicShader.SetMat4("projection", scene->GetProjection());
-
-		glBindVertexArray(waterVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glBindVertexArray(0);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDepthMask(GL_TRUE);
-		glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
-		glStencilMask(0x00); //Not reading stencil anymore
 		//Draw scene on top of water in reflection map
 		reflectionModelShader.Bind();
 		reflectionModelShader.SetFloat("waterHeight", waterPosition[1]);
@@ -270,7 +245,6 @@ void HelloWaterDrawingProgram::Draw()
 		skybox.SetViewMatrix(underWaterView);
 		skybox.SetProjectionMatrix(scene->GetProjection());
 		skybox.Draw();
-		glDisable(GL_STENCIL_TEST);
 
 	}
 	//==================REFRACTION==================
@@ -279,32 +253,7 @@ void HelloWaterDrawingProgram::Draw()
 		glBindFramebuffer(GL_FRAMEBUFFER, refractionBuffer);
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//Stencil pass
-		glEnable(GL_STENCIL_TEST);
-		glStencilFunc(GL_ALWAYS, 1, 0xFF); // Set any stencil to 1
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF); // Write to stencil buffer
-		glClear(GL_STENCIL_BUFFER_BIT);
-		glDepthMask(GL_FALSE);
-		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-		//Draw water plane on stencil buffer
-		basicShader.Bind();
-		stencilWaterModel = glm::mat4(1.0f);
-		stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
 
-		stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
-
-		basicShader.SetMat4("model", stencilWaterModel);
-		basicShader.SetMat4("view", sceneCamera->GetViewMatrix());
-		basicShader.SetMat4("projection", scene->GetProjection());
-
-		glBindVertexArray(waterVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glBindVertexArray(0);
-		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glDepthMask(GL_TRUE);
-		glStencilFunc(GL_EQUAL, 1, 0xFF); // Pass test if stencil value is 1
-		glStencilMask(0x00); //Not reading stencil anymore
 		//Draw scene on top of water in reflection map
 		refractionModelShader.Bind();
 		refractionModelShader.SetFloat("waterHeight", waterPosition[1]);
@@ -325,11 +274,14 @@ void HelloWaterDrawingProgram::Draw()
 		skybox.SetViewMatrix(sceneCamera->GetViewMatrix());
 		skybox.SetProjectionMatrix(scene->GetProjection());
 		skybox.Draw();
-		glDisable(GL_STENCIL_TEST);
 	}
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		frameBufferShaderProgram.Bind();
+        stencilWaterModel = glm::mat4(1.0f);
+        stencilWaterModel = glm::translate(stencilWaterModel, glm::vec3(waterPosition[0], waterPosition[1], waterPosition[2]));
+
+        stencilWaterModel = glm::scale(stencilWaterModel, glm::vec3(5.0f, 5.0f, 5.0f));
 
 		frameBufferShaderProgram.SetMat4("model", stencilWaterModel);
 		frameBufferShaderProgram.SetMat4("projection", scene->GetProjection());
