@@ -30,6 +30,7 @@ public:
     void Draw();
 private:
     std::vector<float> vertices;
+	std::vector<unsigned int> indices;
     unsigned sphereVAO = 0;
     unsigned sphereVBO = 0;
     unsigned sphereEBO = 0;

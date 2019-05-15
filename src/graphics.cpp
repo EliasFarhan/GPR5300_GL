@@ -356,12 +356,20 @@ unsigned stbCreateTexture(const char* filename, bool smooth, bool mipMaps, bool 
 	int width, height, nrChannels;
 
 	int reqComponents = 0;
-	if (extension == ".jpg" || extension == ".tga")
+	if (extension == ".jpg" || extension == ".tga" || extension == ".hdr")
 		reqComponents = 3;
 	else if (extension == ".png")
 		reqComponents = 4;
 
-	unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, reqComponents);
+	void *data = nullptr;
+	if(extension == ".hdr")
+	{
+		data = stbi_loadf(filename, &width, &height, &reqComponents, 0);
+	}
+	else 
+	{
+		data = stbi_load(filename, &width, &height, &nrChannels, reqComponents);
+	}
 	if (data == nullptr)
 	{
 		std::cerr << "[Error] Texture: cannot load " << filename << "\n";
@@ -389,6 +397,10 @@ unsigned stbCreateTexture(const char* filename, bool smooth, bool mipMaps, bool 
 	else if (extension == ".png")
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	}
+	else if(extension == ".hdr")
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
 	}
 	if (mipMaps)
 	{

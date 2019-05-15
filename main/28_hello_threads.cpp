@@ -89,7 +89,7 @@ void HelloInstancingDrawingProgram::Init()
 {
 	auto engine = Engine::GetPtr();
 	auto& camera = engine->GetCamera();
-	camera.Position = glm::vec3(500.0f, 100.0f, 500.0f);
+	camera.Position = glm::vec3(.0f, .0f, .0f);
 	programName = "Hello Instancing";
 
 	asteroidModel.Init("data/models/rocks01/rock_01.obj", true);
