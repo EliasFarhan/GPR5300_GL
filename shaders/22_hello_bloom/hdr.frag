@@ -4,7 +4,7 @@ in vec2 TexCoords;
 
 uniform sampler2D hdrBuffer;
 uniform sampler2D bloomBlur;
-uniform float exposure = 1.0;
+uniform float exposure;// = 1.0;
 void main()
 {        
 	const float gamma = 2.2;

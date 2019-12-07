@@ -109,7 +109,7 @@ void HelloCoordsDrawingProgram::Init()
     shaderProgram.CompileSource(
             "shaders/04_hello_coords/coords.vert",
             "shaders/04_hello_coords/coords.frag");
-	textureWall = gliCreateTexture("data/sprites/wall.dds");
+	textureWall = stbCreateTexture("data/sprites/wall.jpg");
 
 #ifdef CUBE_SAMPLE
 	glGenBuffers(1, &VBO);//like new VBO

@@ -1,13 +1,16 @@
 // An abstract camera class that processes input and calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 #pragma once
 
-#include <GL/glew.h>
+#ifndef __EMSCRIPTEN__
+#include <glad/glad.h>
+#else
+#include "emscripten.h"
+#endif
+
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#ifdef USE_SDL2
 #include <SDL.h>
-#endif
 
 #include <vector>
 

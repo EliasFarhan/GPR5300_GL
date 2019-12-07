@@ -77,52 +77,61 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
   set(USE_EMSCRIPTEN true)
 
 else()
-#include either SFML2 or SDL2
-  set(USE_SDL2 ON CACHE BOOL  "Use SDL2")
   set(USE_EMSCRIPTEN false)
 endif()
 
-if(USE_SDL2)
-	if(NOT USE_EMSCRIPTEN)
-		#sdl2 
-		set(SDL_VERSION 2.0.9)
-		set(SDL_DIR ${EXTERNAL_DIR}/SDL2-${SDL_VERSION}/)
-		set(SDL_STATIC ON)
-		set(SDL_SHARED OFF)
-		add_subdirectory(${SDL_DIR})
-		include_directories(${SDL2_DIR}/include ${SDL2_DIR}/src)
+if(NOT USE_EMSCRIPTEN)
+	#sdl2
+	set(SDL_VERSION 2.0.9)
+	set(SDL_DIR ${EXTERNAL_DIR}/SDL2-${SDL_VERSION}/)
+	set(SDL_STATIC ON)
+	set(SDL_SHARED OFF)
+	add_subdirectory(${SDL_DIR})
+	include_directories(${SDL2_DIR}/include ${SDL2_DIR}/src)
+	LIST(APPEND SFGE_LIBRARIES
+			SDL2-static)
+	if(MSVC)
 		LIST(APPEND SFGE_LIBRARIES
-				SDL2-static)
-		if(MSVC)
-			LIST(APPEND SFGE_LIBRARIES
-				SDL2main)
-		endif(MSVC)
-		#opengl
-		#set(OpenGL_GL_PREFERENCE GLVND)
-		find_package(OpenGL REQUIRED)
-		include_directories(${OPENGL_INCLUDE_DIR})
-		LIST(APPEND SFGE_LIBRARIES
-				${OPENGL_LIBRARIES})
-			message("OpenGL Libraries: ${OPENGL_LIBRARIES}")
-		#glew
-		set(GLEW_DIR ${EXTERNAL_DIR}/glew)
-		add_compile_definitions(GLEW_STATIC)
-		include_directories(${GLEW_DIR}/include)
-		add_subdirectory(${GLEW_DIR})
-		LIST(APPEND SFGE_LIBRARIES
-			glew)
-		#stb_image
-		set(SFML_DIR ${EXTERNAL_DIR}/SFML)
-		include_directories(${SFML_DIR}/extlibs/headers)
-	endif()
-	
+			SDL2main)
+	endif(MSVC)
+	#opengl
+	set(OpenGL_GL_PREFERENCE GLVND)
+	find_package(OpenGL REQUIRED)
+	include_directories(${OPENGL_INCLUDE_DIR})
+	LIST(APPEND SFGE_LIBRARIES
+			${OPENGL_LIBRARIES})
+		message("OpenGL Libraries: ${OPENGL_LIBRARIES}")
+	#glad
+	set(GLAD_DIR ${EXTERNAL_DIR}/glad)
+	include_directories(${GLAD_DIR}/include)
+	add_subdirectory(${GLAD_DIR})
+	add_compile_definitions(IMGUI_IMPL_OPENGL_LOADER_GLAD=1)
+	LIST(APPEND SFGE_LIBRARIES
+		glad)
+	#stb_image
+	set(SFML_DIR ${EXTERNAL_DIR}/SFML)
+	include_directories(${SFML_DIR}/extlibs/headers)
+
+	set(REMOTERY_DIR ${EXTERNAL_DIR}/Remotery)
+	add_subdirectory(${REMOTERY_DIR})
+	include_directories(${REMOTERY_DIR})
+
+	LIST(APPEND SFGE_LIBRARIES Remotery)
 endif()
+
+
 #assimp
 set(BUILD_SHARED_LIBS FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_ASSIMP_TOOLS FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_SAMPLES FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_TESTS FALSE CACHE INTERNAL "")
 set(ASSIMP_NO_EXPORT TRUE CACHE INTERNAL "")
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT FALSE CACHE INTERNAL "")
+set(ASSIMP_BUILD_FBX_IMPORTER TRUE CACHE INTERNAL "")
+set(ASSIMP_BUILD_OBJ_IMPORTER TRUE CACHE INTERNAL "")
+set(ASSIMP_BUILD_STL_IMPORTER TRUE CACHE INTERNAL "")
+set(ASSIMP_BUILD_BLEND_IMPORTER TRUE CACHE INTERNAL "")
+set(ASSIMP_BUILD_GLTF_IMPORTER TRUE CACHE INTERNAL "")
 set(ASSIMP_DIR ${EXTERNAL_DIR}/assimp)
 include_directories(${ASSIMP_DIR}/include ${CMAKE_BINARY_DIR}/externals/assimp/include)
 add_subdirectory(${ASSIMP_DIR})
@@ -130,37 +139,27 @@ LIST(APPEND SFGE_LIBRARIES
 			assimp)
 #gli
 set(GLI_DIR ${EXTERNAL_DIR}/gli)
-IF(NOT EXISTS ${GLI_DIR})
+IF(NOT EXISTS ${GLI_DIR}/CMakeLists.txt)
 message(FATAL_ERROR "Please do git submodule update --init --recursive")
 ENDIF()
 include_directories(${GLI_DIR})
 #glm
 set(GLM_DIR ${EXTERNAL_DIR}/glm)
-IF(NOT EXISTS ${GLM_DIR})
+IF(NOT EXISTS ${GLM_DIR}/CMakeLists.txt)
 message(FATAL_ERROR "Please do git submodule update --init --recursive")
 ENDIF()
 include_directories(${GLM_DIR})
-#SFML Imgui
 
+#Imgui
 set(IMGUI_ROOT ${EXTERNAL_DIR}/imgui/)
 message("IMGUI ROOT: ${IMGUI_ROOT}")
-if(USE_SFML2)
-	set(SFML_IMGUI ${EXTERNAL_DIR}/imgui-sfml/)
-	set(SFML_ROOT ${EXTERNAL_DIR}/SFML/)
-	add_subdirectory(${SFML_IMGUI})
-	include_directories(${IMGUI_ROOT} ${SFML_IMGUI})
-	LIST(APPEND SFGE_LIBRARIES
-		imgui-sfml)
-endif()
 
-if(USE_SDL2)
-	set(SDL2_IMGUI ${EXTERNAL_DIR}/imgui-sdl/)
-	add_subdirectory(${SDL2_IMGUI})
-	include_directories(${IMGUI_ROOT} ${SDL2_IMGUI})
-	LIST(APPEND SFGE_LIBRARIES
-		imgui-sdl)
+set(SDL2_IMGUI ${EXTERNAL_DIR}/imgui-sdl/)
+add_subdirectory(${SDL2_IMGUI})
+include_directories(${IMGUI_ROOT} ${SDL2_IMGUI})
+LIST(APPEND SFGE_LIBRARIES
+	imgui-sdl)
 
-endif()
 
 
 set(UTILITIES_DIR ${EXTERNAL_DIR}/utilities/)
@@ -168,11 +167,7 @@ include_directories(${UTILITIES_DIR})
 
 #MISCELLANEOUS UTILITIES
 if(NOT USE_EMSCRIPTEN)
-set(REMOTERY_DIR ${EXTERNAL_DIR}/Remotery)
-add_subdirectory(${REMOTERY_DIR})
-include_directories(${REMOTERY_DIR})
 
-LIST(APPEND SFGE_LIBRARIES Remotery)
 endif()
 
 #COMMON

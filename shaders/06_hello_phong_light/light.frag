@@ -1,4 +1,3 @@
-
 layout(location = 0) out vec4 FragColor;
 
 uniform vec3 objectColor;
@@ -6,7 +5,7 @@ uniform vec3 lightColor;
 uniform float ambientStrength;
 uniform float diffuseStrength;
 uniform float specularStrength;
-uniform int specularPow;
+uniform float specularPow;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 

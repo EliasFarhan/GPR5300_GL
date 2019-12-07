@@ -10,7 +10,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform vec3 viewPos;
-uniform vec2 texTiling = vec2(1.0,1.0);
+uniform vec2 texTiling;// = vec2(1.0,1.0);
 
 
 void main()

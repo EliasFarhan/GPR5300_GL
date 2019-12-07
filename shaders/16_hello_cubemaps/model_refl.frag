@@ -8,12 +8,15 @@ in vec3 Position;
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
 uniform float reflectionValue;
+
 struct Material 
 {
 	sampler2D texture_diffuse1;
 	sampler2D texture_specular1;
 };
+
 uniform Material material;
+
 void main()
 {    
 	vec3 I = normalize(Position - cameraPos);

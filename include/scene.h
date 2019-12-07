@@ -41,7 +41,7 @@ public:
 	void Init() override;
 	void Draw() override;
 	void Destroy() override;
-	void ProcessInput();
+	void ProcessInput() override;
 	Scene& GetScene() { return scene; }
 private:
 	Scene scene = {};

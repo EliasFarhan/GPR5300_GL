@@ -1,18 +1,21 @@
 
 #include <iostream>
 
-#include <GL/glew.h>
+#include <glad/glad.h>
+#define GL_GLEXT_PROTOTYPES 1
+#include <SDL_opengles2.h>
+#include <SDL.h>
 #include <engine.h>
 #include <graphics.h>
-#ifdef USE_EMSCRIPTEN
-#include <emscripten.h> 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#else
+
 #endif
 #include <chrono>
 #include "imgui.h"
-#ifdef USE_SDL2
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
-#endif
 #include <Remotery.h>
 
 Engine* Engine::enginePtr = nullptr;
@@ -28,21 +31,6 @@ extern "C"
 	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
-
-void GLAPIENTRY
-MessageCallback(GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam)
-{
-	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-		(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-		type, severity, message);
-	fflush(stderr);
-}
 
 Engine::Engine()
 {
@@ -63,11 +51,11 @@ void Engine::Init()
 {
 
 	rmt_CreateGlobalInstance(&rmt);
-#ifdef USE_SDL2
+
 	SDL_Init(SDL_INIT_VIDEO);
 	// Set our OpenGL version.
 // SDL_GL_CONTEXT_CORE gives us only the newer version, deprecated functions are disabled
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, configuration.glMajorVersion);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, configuration.glMinorVersion);
@@ -101,15 +89,12 @@ void Engine::Init()
 
 	glContext = SDL_GL_CreateContext(window);
 
-	const GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		std::cerr << "Error loading GLEW: " << glewGetErrorString(err) << "\n";
-	}
-#if _DEBUG == 1
-	glEnable(GL_DEBUG_OUTPUT);
-	glDebugMessageCallback(MessageCallback, 0);
-#endif
+
+    if (!gladLoadGLES2Loader((GLADloadproc) SDL_GL_GetProcAddress)) {
+        std::cout << "Failed to initialize OpenGL context" << std::endl;
+        assert(false);
+    }
+
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -122,13 +107,12 @@ void Engine::Init()
 
 	// Setup Platform/Renderer bindings
 	ImGui_ImplSDL2_InitForOpenGL(window, glContext);
-	ImGui_ImplOpenGL3_Init("#version 450");
+	ImGui_ImplOpenGL3_Init("#version 300 es");
 
 	engineStartTime = timer.now();
 	previousFrameTime = engineStartTime;
 
 	camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), window);
-#endif
 	
 	for (auto drawingProgram : drawingPrograms)
 	{
@@ -140,7 +124,6 @@ void Engine::Init()
 }
 
 
-#ifdef USE_SDL2
 
 void Engine::Loop()
 {
@@ -177,9 +160,6 @@ void Engine::Loop()
 		{
 			switch(event.key.keysym.scancode)
 			{
-			case SDL_SCANCODE_1:
-				SwitchWireframeMode();
-				break;
 			case SDL_SCANCODE_LALT:
 				camera.SwitchWrapMode();
 				break;
@@ -200,10 +180,7 @@ void Engine::Loop()
 	ImGui::Render();
 	SDL_GL_MakeCurrent(window, glContext);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	if(wireframeMode)
-	{
-		glPolygonMode(GL_FRONT_AND_BACK,  GL_LINE);
-	}
+
 	for (auto drawingProgram : drawingPrograms)
 	{
 		drawingProgram->Draw();
@@ -212,7 +189,6 @@ void Engine::Loop()
 	{
 		rmt_ScopedOpenGLSample(RenderImGuiGPU);
 		rmt_ScopedCPUSample(RenderImGuiCPU, 0);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 	SDL_GL_SwapWindow(window);
@@ -228,7 +204,7 @@ void Engine::GameLoop()
 
 #ifdef __EMSCRIPTEN__
 	// void emscripten_set_main_loop(em_callback_func func, int fps, int simulate_infinite_loop);
-	emscripten_set_main_loop(Loop, 60,1);
+	emscripten_set_main_loop(Loop, 0,0);
 #else
 	while (running)
 	{
@@ -249,7 +225,7 @@ void Engine::GameLoop()
 
 
 }
-#endif
+
 void Engine::UpdateUi()
 {
 	rmt_ScopedOpenGLSample(DrawImGuiGPU);
@@ -337,16 +313,12 @@ void Engine::UpdateUi()
 
 float Engine::GetDeltaTime()
 {
-#ifdef USE_SDL2
 	return dt;
-#endif
 }
 
 float Engine::GetTimeSinceInit()
 {
-#ifdef USE_SDL2
 	return std::chrono::duration_cast<ms>(previousFrameTime - engineStartTime).count() / 1000.f;
-#endif
 }
 
 void Engine::AddDrawingProgram(DrawingProgram* drawingProgram)
@@ -357,14 +329,6 @@ void Engine::AddDrawingProgram(DrawingProgram* drawingProgram)
 Engine* Engine::GetPtr()
 {
 	return enginePtr;
-}
-
-
-void Engine::SwitchWireframeMode()
-{
-	glPolygonMode(GL_FRONT_AND_BACK, wireframeMode ? GL_FILL : GL_LINE);
-	wireframeMode = !wireframeMode;
-	
 }
 
 Configuration &Engine::GetConfiguration()

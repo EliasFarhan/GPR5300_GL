@@ -5,8 +5,8 @@ uniform sampler2D shadowMap;
 
 uniform EngineMaterial material;
 uniform vec3 viewPos;
-uniform bool shadowBiasEnable = false;
-uniform bool pcf = false;
+uniform bool shadowBiasEnable;// = false;
+uniform bool pcf;// = false;
 
 float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal)
 {
@@ -25,7 +25,7 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal)
 		if(pcf)
 		{ 
 			float shadow = 0.0;
-			vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+			vec2 texelSize = 1.0/vec2(textureSize(shadowMap, 0));
 			for(int x = -1; x <= 1; ++x)
 			{
 				for(int y = -1; y <= 1; ++y)
@@ -50,7 +50,7 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal)
 		if(pcf)
 		{
 			float shadow = 0.0;
-			vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+			vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
 			for(int x = -1; x <= 1; ++x)
 			{
 				for(int y = -1; y <= 1; ++y)

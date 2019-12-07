@@ -12,7 +12,7 @@ uniform mat4 projection;
 
 uniform vec3 viewPos;
 uniform mat4 lightSpaceMatrix;
-uniform float texTiling = 0;
+uniform float texTiling;// = 0;
 
 void main()
 {

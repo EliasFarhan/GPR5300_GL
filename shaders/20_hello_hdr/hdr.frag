@@ -3,8 +3,8 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D hdrBuffer;
-uniform bool toneMapping = true;
-uniform float exposure = 1.0;
+uniform bool toneMapping;// = true;
+uniform float exposure;// = 1.0;
 void main()
 {             
 	if(toneMapping)

@@ -14,7 +14,7 @@ struct Material
 	sampler2D texture_specular1;
 };
 uniform Material material;
-uniform float refractiveIndex = 1.52;
+uniform float refractiveIndex;// = 1.52;
 void main()
 {    
 	float ratio = 1.00 / refractiveIndex;

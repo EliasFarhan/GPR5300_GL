@@ -24,7 +24,7 @@ public:
     void Draw() override;
 	void Destroy() override;
 private:
-	void ProcessInput();
+	void ProcessInput() override ;
     Shader cubeShaderProgram;
 	unsigned int cubeVBO, cubeVAO;
 	unsigned int textureWall;
@@ -129,7 +129,7 @@ void HelloStencilDrawingProgram::Init()
 	lastX = config.screenWidth/2.0f;
 	lastY = config.screenHeight/2.0f;
 #endif
-	textureWall = gliCreateTexture("data/sprites/wall.dds");
+	textureWall = stbCreateTexture("data/sprites/wall.jpg");
 	glGenVertexArrays(1, &cubeVAO);
 	glGenBuffers(1, &cubeVBO);
 

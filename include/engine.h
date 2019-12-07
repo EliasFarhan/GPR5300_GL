@@ -4,14 +4,12 @@
 #include <vector>
 #include <string>
 
-#ifdef USE_SDL2
-
-#include <GL/glew.h>
+#ifndef __EMSCRIPTEN__
+#include <glad/glad.h>
+#endif
 #include <SDL.h>
-#include <SDL_opengl.h>
 #ifdef WIN32
 #include <SDL_main.h>
-#endif
 #endif
 
 #include <chrono>
@@ -21,21 +19,19 @@
 class DrawingProgram;
 struct Remotery;
 
-#ifdef USE_SDL2
 typedef SDL_Color Color;
 using ms = std::chrono::duration<float, std::milli>;
-#endif
 
 struct Configuration
 {
 	unsigned int screenWidth = 800;
 	unsigned int screenHeight = 600;
-	int vsync = 0;
+	int vsync = 1;
 	Color bgColor = {0,0,0,0};
 
 	std::string windowName = "OpenGL";
-	unsigned int glMajorVersion = 4;
-	unsigned int glMinorVersion = 6;
+	unsigned int glMajorVersion = 3;
+	unsigned int glMinorVersion = 0;
 };
 
 class Engine
@@ -60,11 +56,8 @@ public:
 
 	static Engine* GetPtr();
 private:
-	void SwitchWireframeMode();
 	static Engine* enginePtr;
 
-
-#ifdef USE_SDL2
 
 	void Loop();
 	SDL_Window* window = nullptr;
@@ -74,14 +67,13 @@ private:
 	std::chrono::high_resolution_clock::time_point engineStartTime;
 	std::chrono::high_resolution_clock::time_point previousFrameTime;
 	float dt;
-#endif
+
 	std::vector<DrawingProgram*> drawingPrograms;
 	InputManager inputManager;
 	Camera camera;
 	Configuration configuration;
 	Remotery* rmt;
 	int selectedDrawingProgram = -1;
-	bool wireframeMode = false;
 	bool debugInfo = true;
 	bool drawingProgramsHierarchy = true;
 	bool inspector = true;

@@ -11,10 +11,10 @@ uniform sampler2D dudvMap;
 uniform sampler2D depthMap;
 uniform sampler2D normalMap;
 
-uniform float waveStrength = 0.02;
+uniform float waveStrength;// = 0.02;
 uniform vec3 viewPos;
 uniform float timeSinceStart;
-uniform float waveSpeed = 0.01;
+uniform float waveSpeed;// = 0.01;
 
 void main()
 { 

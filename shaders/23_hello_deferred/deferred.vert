@@ -11,7 +11,7 @@ uniform mat4 view;
 uniform mat4 projection;
 
 uniform vec3 viewPos;
-uniform vec2 texTiling = vec2(1,1);
+uniform vec2 texTiling;// = vec2(1,1);
 
 void main()
 {

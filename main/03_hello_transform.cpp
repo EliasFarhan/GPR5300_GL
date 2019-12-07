@@ -54,7 +54,7 @@ void HelloTransformDrawingProgram::Init()
             "shaders/03_hello_transform/transform.frag"
     );
 
-    textureWall = gliCreateTexture("data/sprites/wall.dds");
+    textureWall = stbCreateTexture("data/sprites/wall.jpg");
     glGenVertexArrays(1, &VAO); //like: new VAO()
     // 1. bind Vertex Array Object
     glBindVertexArray(VAO);//Now use our VAO

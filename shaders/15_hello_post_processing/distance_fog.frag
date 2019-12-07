@@ -5,10 +5,10 @@ in vec2 TexCoords;
 uniform sampler2D screenTexture;
 uniform sampler2D depthTexture;
 uniform vec3 fogColor;
-uniform float zFar = 100.0;
-uniform float zNear = 0.1;
-uniform float fogBegin = 20.0;
-uniform float fogComplete = 30.0;
+uniform float zFar;// = 100.0;
+uniform float zNear;// = 0.1;
+uniform float fogBegin;// = 20.0;
+uniform float fogComplete;// = 30.0;
 
 
 void main()

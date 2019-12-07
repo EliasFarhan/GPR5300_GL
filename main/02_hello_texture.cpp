@@ -1,6 +1,6 @@
 #include <engine.h>
 #include <graphics.h>
-#include <GL/glew.h>
+
 
 
 //#define OTHER_TEXTURE
@@ -59,7 +59,7 @@ void HelloTextureDrawingProgram::Init()
             "shaders/02_hello_texture/texture.frag"
 #endif
     );
-	textureWall = gliCreateTexture("data/sprites/wall.dds");
+	textureWall = stbCreateTexture("data/sprites/wall.jpg");
 #ifdef OTHER_TEXTURE
 	textureOtherPlay = stbCreateTexture("data/sprites/other_play.png");
 #endif
