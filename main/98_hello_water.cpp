@@ -196,7 +196,7 @@ void HelloWaterDrawingProgram::Init()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX1, config.screenWidth, config.screenHeight);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, refractionDepthBuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, refractionDepthBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 }

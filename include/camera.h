@@ -68,6 +68,7 @@ public:
 	//Toggle the option of free camera or not
 	void SwitchWrapMode();
 
+
 private:
 	friend class Engine;
 	// Calculates the front vector from the Camera's (updated) Euler Angles

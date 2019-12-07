@@ -16,16 +16,18 @@ public:
 	std::vector<Mesh> meshes;
 	std::string directory;
 	bool gammaCorrection;
+	glm::vec3 modelCenter;
+	float modelRadius;
 	/*  Functions   */
-	void Init(const char *path)
+	void Init(const char *path, bool generateSphere=false)
 	{
-		loadModel(path);
+		loadModel(path, generateSphere);
 	}
-	void Draw(Shader shader);
+	void Draw(Shader& shader);
 private:
 
 	/*  Functions   */
-	void loadModel(std::string path);
+	void loadModel(std::string path, bool generateSphere);
 	void processNode(aiNode *node, const aiScene *scene);
 	Mesh processMesh(aiMesh *mesh, const aiScene *scene);
 	std::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type,

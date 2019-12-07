@@ -9,7 +9,7 @@
 
 #define INSTANCING
 #define MOVEMENT
-//#define OPTI_BANDWIDTH
+#define OPTI_BANDWIDTH
 class HelloInstancingDrawingProgram : public DrawingProgram
 {
 public:

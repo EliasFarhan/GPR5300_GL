@@ -3,13 +3,13 @@
 #include "file_utility.h"
 #include <glm/glm.hpp>
 
-void Model::Draw(Shader shader)
+void Model::Draw(Shader& shader)
 {
 	for (auto& mesh : meshes)
 		mesh.Draw(shader);
 }
 
-void Model::loadModel(std::string path)
+void Model::loadModel(std::string path, bool generateSphere)
 {
 	Assimp::Importer import;
 	const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
@@ -22,6 +22,34 @@ void Model::loadModel(std::string path)
 	directory = path.substr(0, path.find_last_of('/'));
 
 	processNode(scene->mRootNode, scene);
+	if(generateSphere)
+	{
+		unsigned vertNmb = 0;
+		glm::vec3 vertTotal = glm::vec3(0.0f);
+
+		modelRadius = -1.0f;
+		for(auto& mesh : meshes)
+		{
+			for(auto& vert : mesh.vertices)
+			{
+				vertTotal += vert.Position;
+				vertNmb++;
+			}
+		}
+		modelCenter = vertTotal / (float)vertNmb;
+		for (auto& mesh : meshes)
+		{
+			for (auto& vert : mesh.vertices)
+			{
+				const glm::vec3 pos = vert.Position;
+				const float length = glm::length(pos - modelCenter);
+				if(modelRadius < 0.0f || modelRadius > length)
+				{
+					modelRadius = length;
+				}
+			}
+		}
+	}
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene)
