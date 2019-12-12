@@ -1,7 +1,9 @@
 #include <scene.h>
 
 #include "file_utility.h"
+#ifndef __EMSCRIPTEN__
 #include <Remotery.h>
+#endif
 #include <glm/gtc/quaternion.inl>
 #include <glm/detail/type_quat.hpp>
 #include <json_utility.h>
@@ -110,9 +112,10 @@ void SceneDrawingProgram::Init()
 }
 void SceneDrawingProgram::Draw()
 {
+#ifndef __EMSCRIPTEN__
 	rmt_ScopedOpenGLSample(DrawScene);
 	rmt_ScopedCPUSample(DrawSceneCPU, 0);
-
+#endif
 	ProcessInput();
 
 	glEnable(GL_DEPTH_TEST);
@@ -152,7 +155,6 @@ void SceneDrawingProgram::ProcessInput()
 	auto& camera = engine->GetCamera();
 	float dt = engine->GetDeltaTime();
 	float cameraSpeed = 1.0f;
-#ifdef USE_SDL2
 	if (inputManager.GetButton(SDLK_w))
 	{
 		camera.ProcessKeyboard(FORWARD, engine->GetDeltaTime());
@@ -169,7 +171,6 @@ void SceneDrawingProgram::ProcessInput()
 	{
 		camera.ProcessKeyboard(RIGHT, engine->GetDeltaTime());
 	}
-#endif
 
 	auto mousePos = inputManager.GetMousePosition();
 

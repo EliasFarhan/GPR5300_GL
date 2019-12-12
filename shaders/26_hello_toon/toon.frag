@@ -4,10 +4,10 @@ in VS_OUT vs_out;
 in vec3 Normal;
 
 uniform EngineMaterial material;
-uniform vec4 unlitColor = vec4(0.25,0.25,0.25,1);
-uniform vec4 litColor = vec4(1,1,1,1);
-uniform float shininess = 32.0;
-uniform int toonLayers = 4;
+uniform vec4 unlitColor;// = vec4(0.25,0.25,0.25,1);
+uniform vec4 litColor;// = vec4(1,1,1,1);
+uniform float shininess;// = 32.0;
+uniform int toonLayers;// = 4;
 
 
 
@@ -34,9 +34,9 @@ void main()
         // low priority: diffuse illumination
 		for(int i = 0; i < toonLayers; i++)
 		{
-			if (attenuation * max(0.0, dot(normal, lightDir)) >= 0.5+1.0*i/toonLayers/2.0)
+			if (attenuation * max(0.0, dot(normal, lightDir)) >= 0.5+1.0*float(i)/float(toonLayers)/2.0)
 			{
-				fragmentColor = vec3(litColor)*(unlitColor.r+(1.0-unlitColor.r)*i/toonLayers); 
+				fragmentColor = vec3(litColor)*(unlitColor.r+(1.0-unlitColor.r)*float(i)/float(toonLayers));
 			}
 		}
 		currentLightColor = fragmentColor;

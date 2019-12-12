@@ -70,8 +70,8 @@ add_custom_target(
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s FULL_ES3=1 --emrun -O2 --preload-file shaders/")
-  set(SDL2_LIBRARIES "-s USE_SDL=2 -s FULL_ES3=1 --emrun")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s FULL_ES3=1 -O2 --preload-file shaders/")
+  set(SDL2_LIBRARIES "-s USE_SDL=2 -s USE_WEBGL2=1 --emrun")
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
   set(USE_SDL2 ON CACHE BOOL  "Use SDL2")
   set(USE_EMSCRIPTEN true)
@@ -101,13 +101,7 @@ if(NOT USE_EMSCRIPTEN)
 	LIST(APPEND SFGE_LIBRARIES
 			${OPENGL_LIBRARIES})
 		message("OpenGL Libraries: ${OPENGL_LIBRARIES}")
-	#glad
-	set(GLAD_DIR ${EXTERNAL_DIR}/glad)
-	include_directories(${GLAD_DIR}/include)
-	add_subdirectory(${GLAD_DIR})
-	add_compile_definitions(IMGUI_IMPL_OPENGL_LOADER_GLAD=1)
-	LIST(APPEND SFGE_LIBRARIES
-		glad)
+
 	#stb_image
 	set(SFML_DIR ${EXTERNAL_DIR}/SFML)
 	include_directories(${SFML_DIR}/extlibs/headers)
@@ -118,7 +112,13 @@ if(NOT USE_EMSCRIPTEN)
 
 	LIST(APPEND SFGE_LIBRARIES Remotery)
 endif()
-
+#glad
+set(GLAD_DIR ${EXTERNAL_DIR}/glad)
+include_directories(${GLAD_DIR}/include)
+add_subdirectory(${GLAD_DIR})
+add_compile_definitions(IMGUI_IMPL_OPENGL_LOADER_GLAD=1)
+LIST(APPEND SFGE_LIBRARIES
+		glad)
 
 #assimp
 set(BUILD_SHARED_LIBS FALSE CACHE INTERNAL "")

@@ -54,12 +54,12 @@ public:
 	std::vector<DrawingProgram*>& GetDrawingPrograms() { return drawingPrograms; };
 
 
+  void Loop();
 	static Engine* GetPtr();
 private:
 	static Engine* enginePtr;
 
 
-	void Loop();
 	SDL_Window* window = nullptr;
 	SDL_GLContext glContext;
 	std::chrono::high_resolution_clock timer;

@@ -1,23 +1,22 @@
 
 #include <iostream>
 
-#include <glad/glad.h>
-#define GL_GLEXT_PROTOTYPES 1
-#include <SDL_opengles2.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+#include <gl_wrappers.h>
 #include <SDL.h>
 #include <engine.h>
 #include <graphics.h>
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#else
 
-#endif
+
 #include <chrono>
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+#ifndef __EMSCRIPTEN__
 #include <Remotery.h>
-
+#endif
 Engine* Engine::enginePtr = nullptr;
 
 #ifdef WIN32
@@ -49,9 +48,9 @@ Engine::~Engine()
 
 void Engine::Init()
 {
-
+#ifndef __EMSCRIPTEN__
 	rmt_CreateGlobalInstance(&rmt);
-
+#endif
 	SDL_Init(SDL_INIT_VIDEO);
 	// Set our OpenGL version.
 // SDL_GL_CONTEXT_CORE gives us only the newer version, deprecated functions are disabled
@@ -124,11 +123,12 @@ void Engine::Init()
 }
 
 
-
 void Engine::Loop()
 {
+#ifndef __EMSCRIPTEN__
 	rmt_ScopedOpenGLSample(EngineLoopGPU);
 	rmt_ScopedCPUSample(EngineLoopCPU, 0);
+#endif
 	std::chrono::high_resolution_clock::time_point currentFrame = timer.now();
 
 	dt = std::chrono::duration_cast<ms>(currentFrame - previousFrameTime).count() / 1000.0f;
@@ -187,24 +187,33 @@ void Engine::Loop()
 	}
 	if (enableImGui)
 	{
+#ifndef __EMSCRIPTEN__
 		rmt_ScopedOpenGLSample(RenderImGuiGPU);
 		rmt_ScopedCPUSample(RenderImGuiCPU, 0);
+#endif
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	}
 	SDL_GL_SwapWindow(window);
 }
 
-
+#ifdef __EMSCRIPTEN__
+void EmLoop(void* engine)
+{
+  static_cast<Engine*>(engine)->Loop();
+}
+#endif
 void Engine::GameLoop()
 {
+#ifndef __EMSCRIPTEN__
 	rmt_BindOpenGL();
+#endif
 	running = true;
 	engineStartTime = timer.now();
 	previousFrameTime = engineStartTime;
 
 #ifdef __EMSCRIPTEN__
 	// void emscripten_set_main_loop(em_callback_func func, int fps, int simulate_infinite_loop);
-	emscripten_set_main_loop(Loop, 0,0);
+	emscripten_set_main_loop_arg(&EmLoop, this, 0,0);
 #else
 	while (running)
 	{
@@ -228,14 +237,15 @@ void Engine::GameLoop()
 
 void Engine::UpdateUi()
 {
+#ifndef __EMSCRIPTEN__
 	rmt_ScopedOpenGLSample(DrawImGuiGPU);
 	rmt_ScopedCPUSample(DrawImGuiCPU, 0);
+#endif
 	auto& config = GetConfiguration();
 	const auto windowSize = Vec2f(config.screenWidth, config.screenHeight);
 	if (debugInfo)
 	{
 #ifdef USE_SDL2
-
 		int majorVersion = 0, minorVersion = 0;
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &majorVersion);
 		SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minorVersion);

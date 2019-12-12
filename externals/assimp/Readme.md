@@ -17,6 +17,8 @@ A library to import and export various 3d-model-formats including scene-post-pro
 
 APIs are provided for C and C++. There are various bindings to other languages (C#, Java, Python, Delphi, D). Assimp also runs on Android and iOS.
 
+[Check the latest doc](https://assimp-docs.readthedocs.io/en/latest/).
+
 Additionally, assimp features various __mesh post processing tools__: normals and tangent space generation, triangulation, vertex cache locality optimization, removal of degenerate primitives and duplicate vertices, sorting by primitive type, merging of redundant materials and many more.
 
 This is the development repo containing the latest features and bugfixes. For productive use though, we recommend one of the stable releases available from [Github Assimp Releases](https://github.com/assimp/assimp/releases).
@@ -58,13 +60,19 @@ __Importers__:
 - ENFF
 - [FBX](https://en.wikipedia.org/wiki/FBX)
 - [glTF 1.0](https://en.wikipedia.org/wiki/GlTF#glTF_1.0) + GLB
-- [glTF 2.0](https://en.wikipedia.org/wiki/GlTF#glTF_2.0)
+- [glTF 2.0](https://en.wikipedia.org/wiki/GlTF#glTF_2.0):
+  At the moment for glTF2.0 the following extensions are supported:
+  + KHR_lights_punctual ( 5.0 )
+  + KHR_materials_pbrSpecularGlossiness ( 5.0 )
+  + KHR_materials_unlit ( 5.0 )
+  + KHR_texture_transform ( 5.1 under test )
 - HMB
 - IFC-STEP
 - IRR / IRRMESH
 - [LWO](https://en.wikipedia.org/wiki/LightWave_3D)
 - LWS
 - LXO
+- [M3D](https://bztsrc.gitlab.io/model3d)
 - MD2
 - MD3
 - MD5
@@ -99,7 +107,7 @@ __Importers__:
 
 Additionally, some formats are supported by dependency on non-free code or external SDKs (not built by default):
 
-- [C4D](https://en.wikipedia.org/wiki/Cinema_4D) (https://github.com/assimp/assimp/wiki/Cinema4D-&-Melange)
+- [C4D](https://en.wikipedia.org/wiki/Cinema_4D) (https://github.com/assimp/assimp/wiki/Cinema4D-&-Melange) IMporting geometry + node hierarchy are currently supported
 
 __Exporters__:
 
@@ -118,12 +126,12 @@ __Exporters__:
 - FBX ( experimental )
 
 ### Building ###
-Take a look into the https://github.com/assimp/assimp/blob/master/Build.md file. Our build system is CMake, if you used CMake before there is a good chance you know what to do.
+Take a look into the https://github.com/assimp/assimp/blob/master/Build.md file. We are available in vcpkg, and our build system is CMake; if you used CMake before there is a good chance you know what to do.
 
 ### Ports ###
 * [Android](port/AndroidJNI/README.md)
 * [Python](port/PyAssimp/README.md)
-* [.NET](port/AssimpNET/Readme.md)
+* [.NET](https://github.com/kebby/assimp-net)
 * [Pascal](port/AssimpPascal/Readme.md)
 * [Javascript (Alpha)](https://github.com/makc/assimp2json)
 * [Unity 3d Plugin](https://www.assetstore.unity3d.com/en/#!/content/91777)
@@ -134,7 +142,7 @@ Take a look into the https://github.com/assimp/assimp/blob/master/Build.md file.
 [open3mod](https://github.com/acgessler/open3mod) is a powerful 3D model viewer based on Assimp's import and export abilities.
 
 #### Repository structure ####
-Open Asset Import Library is implemented in C++. The directory structure is:
+Open Asset Import Library is implemented in C++. The directory structure looks like:
 
 	/code		Source code
 	/contrib	Third-party libraries
@@ -147,6 +155,11 @@ Open Asset Import Library is implemented in C++. The directory structure is:
 	/samples	A small number of samples to illustrate possible
                         use cases for Assimp
 
+The source code is organized in the following way:
+
+	code/Common		The base implementation for importers and the infrastructure
+	code/PostProcessing	The post-processing steps
+	code/<FormatName>	Implementation for import and export for the format
 
 ### Where to get help ###
 For more information, visit [our website](http://assimp.org/). Or check out the `./doc`- folder, which contains the official documentation in HTML format.
