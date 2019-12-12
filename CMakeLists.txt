@@ -3,6 +3,7 @@ project(GPR5300)
 
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+set(BUILD_SHARED_LIBS FALSE CACHE INTERNAL "")
 if(WIN32)
 add_compile_definitions(NOMINMAX)
 endif(WIN32)
@@ -70,11 +71,13 @@ add_custom_target(
 )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_SDL=2 -s FULL_ES3=1 -O2 --preload-file shaders/")
-  set(SDL2_LIBRARIES "-s USE_SDL=2 -s USE_WEBGL2=1 --emrun")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s DISABLE_EXCEPTION_CATCHING=1 -s USE_SDL=2 -s USE_WEBGL2=1 -s ASSERTIONS=1 -g4 -O0 ")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun -s EXPORT_ALL=1 --use-preload-plugins --preload-file shaders/ ")
+
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
   set(USE_SDL2 ON CACHE BOOL  "Use SDL2")
-  set(USE_EMSCRIPTEN true)
+  set(USE_EMSCRIPTEN TRUE CACHE INTERNAL "")
 
 else()
   set(USE_EMSCRIPTEN false)
@@ -121,7 +124,6 @@ LIST(APPEND SFGE_LIBRARIES
 		glad)
 
 #assimp
-set(BUILD_SHARED_LIBS FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_ASSIMP_TOOLS FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_SAMPLES FALSE CACHE INTERNAL "")
 set(ASSIMP_BUILD_TESTS FALSE CACHE INTERNAL "")
@@ -135,6 +137,7 @@ set(ASSIMP_BUILD_GLTF_IMPORTER TRUE CACHE INTERNAL "")
 set(ASSIMP_DIR ${EXTERNAL_DIR}/assimp)
 include_directories(${ASSIMP_DIR}/include ${CMAKE_BINARY_DIR}/externals/assimp/include)
 add_subdirectory(${ASSIMP_DIR})
+
 LIST(APPEND SFGE_LIBRARIES
 			assimp)
 #gli
@@ -153,7 +156,7 @@ include_directories(${GLM_DIR})
 #Imgui
 set(IMGUI_ROOT ${EXTERNAL_DIR}/imgui/)
 message("IMGUI ROOT: ${IMGUI_ROOT}")
-
+add_compile_definitions("USE_GL_ES3")
 set(SDL2_IMGUI ${EXTERNAL_DIR}/imgui-sdl/)
 add_subdirectory(${SDL2_IMGUI})
 include_directories(${IMGUI_ROOT} ${SDL2_IMGUI})
@@ -197,6 +200,7 @@ source_group("Shaders" FILES ${SHADERS_SRC})
 source_group("Scenes" FILES ${SCENES_SRC})
 add_library(COMMON ${SRC} ${SHADERS_SRC} ${SCENES_SRC})
 target_link_libraries(COMMON PUBLIC ${SFGE_LIBRARIES})
+MESSAGE("Libraries: ${SFGE_LIBRARIES}")
 set_property(TARGET COMMON PROPERTY CXX_STANDARD 17)
 add_dependencies(COMMON Shaders Scenes)
 if(USE_SDL2)
@@ -225,13 +229,12 @@ foreach(course_file ${COURSE_FILES} )
     target_link_libraries(${course_name} PUBLIC COMMON)
 	set_property(TARGET ${course_name} PROPERTY CXX_STANDARD 17)
 	IF(UNIX)
-		set_target_properties(${course_name} PROPERTIES COMPILE_FLAGS "-save-temps -ffast-math")
+		set_target_properties(${course_name} PROPERTIES COMPILE_FLAGS "-ffast-math")
+		TARGET_LINK_OPTIONS(${course_name} INTERFACE "-s MAIN_MODULE=1")
 	ENDIF(UNIX)
 	set_target_properties (${course_name} PROPERTIES
     FOLDER Courses)
-  IF(USE_EMSCRIPTEN)
-    target_compile_options(${course_name} PUBLIC --emrun)
-  ENDIF()
+
   add_custom_command(TARGET ${course_name} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                        ${CMAKE_SOURCE_DIR}/data ${CMAKE_BINARY_DIR}/data)

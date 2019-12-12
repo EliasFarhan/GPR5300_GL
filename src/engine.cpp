@@ -88,11 +88,12 @@ void Engine::Init()
 
 	glContext = SDL_GL_CreateContext(window);
 
-
+#ifndef __EMSCRIPTEN__
     if (!gladLoadGLES2Loader((GLADloadproc) SDL_GL_GetProcAddress)) {
         std::cout << "Failed to initialize OpenGL context" << std::endl;
         assert(false);
     }
+#endif
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
@@ -213,7 +214,7 @@ void Engine::GameLoop()
 
 #ifdef __EMSCRIPTEN__
 	// void emscripten_set_main_loop(em_callback_func func, int fps, int simulate_infinite_loop);
-	emscripten_set_main_loop_arg(&EmLoop, this, 0,0);
+	emscripten_set_main_loop_arg(&EmLoop, this,60,1);
 #else
 	while (running)
 	{

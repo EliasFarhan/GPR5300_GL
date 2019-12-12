@@ -16,24 +16,27 @@
 #   target_link_libraries(MY_PROJECT ${IMGUI_SFML_DEPENDENCIES})
 # .
 # Define spine-sfml library
-if(IMGUI_ROOT)
+if (IMGUI_ROOT)
     message("IMGUI ROOT: ${IMGUI_ROOT}")
-	
-	file(GLOB IMGUI_FILES
-		"${IMGUI_ROOT}/imgui_draw.cpp"
-		"${IMGUI_ROOT}/imgui_demo.cpp"
-		"${IMGUI_ROOT}/imgui.cpp"
-		"${IMGUI_ROOT}/imgui.h"
-		"${IMGUI_ROOT}/imgui_widgets.cpp"
-			)
-	include_directories(${IMGUI_ROOT})
-	# Rename that pesky imconfig.h file for the user.
-	install(FILES ${IMGUI_INCLUDE_DIR}/imconfig.h DESTINATION include RENAME imconfig-sample.h)
 
-endif()
-file(GLOB_RECURSE INCLUDES "imgui_impl_opengl3.h" "imgui_impl_sdl.h" )
+    file(GLOB IMGUI_FILES
+            "${IMGUI_ROOT}/imgui_draw.cpp"
+            "${IMGUI_ROOT}/imgui_demo.cpp"
+            "${IMGUI_ROOT}/imgui.cpp"
+            "${IMGUI_ROOT}/imgui.h"
+            "${IMGUI_ROOT}/imgui_widgets.cpp"
+            )
+    include_directories(${IMGUI_ROOT})
+    # Rename that pesky imconfig.h file for the user.
+    install(FILES ${IMGUI_INCLUDE_DIR}/imconfig.h DESTINATION include RENAME imconfig-sample.h)
+
+endif ()
+file(GLOB_RECURSE INCLUDES "imgui_impl_opengl3.h" "imgui_impl_sdl.h")
 include_directories(${SDL_DIR}/include ${IMGUI}/include)
-file(GLOB_RECURSE SOURCES  "imgui_impl_opengl3.cpp" "imgui_impl_sdl.cpp")
+file(GLOB_RECURSE SOURCES "imgui_impl_opengl3.cpp" "imgui_impl_sdl.cpp")
 add_library(imgui-sdl STATIC ${SOURCES} ${INCLUDES} ${IMGUI_FILES})
-target_link_libraries(imgui-sdl SDL2-static)
+if (USE_EMSCRIPTEN)
 
+else ()
+    target_link_libraries(imgui-sdl SDL2-static)
+endif ()
